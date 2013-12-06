@@ -14,5 +14,7 @@ starter.wait(function () {
     var words = [new Word('plume', 10), new Word('fire', 7), new Word('dead', 2)];
     for (var i=0; i<words.length; i++) words[i].paint(background);
 
+    //background.blur(5);
+
     //stopwatch.stop('stopped');
 });

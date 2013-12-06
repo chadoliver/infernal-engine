@@ -8,38 +8,12 @@ var Word = (function () {
 
         var size = 20 + 2 * frequency;
         var canvas = new Canvas(600, 200);
-        canvas.writeText(this.text, size);
+        canvas.writeText(this.text, size, true);
 
         var fullImage = canvas.readImage();
         var bbox = new BoundingBox(fullImage);
         this.image = canvas.readImage(bbox);
     }
-
-    /*
-    Word.prototype.findPosition = function (background) {
-        var candidatePositions = background.getOrderedCoordinates();    // this is a list of all coordinates for pixels in background.image, ordered by distance from the center.
-        var wordPixelCoordinates = this.getOrderedCoordinates();        // this is a list of all coordinates for black pixels in this.image, in random order.
-
-        for (var i=0; i<candidatePositions.length; i++) {
-            
-            var position = candidatePositions[i];
-            var backgroundPixelCoordinates = wordPixelCoordinates.slice(0); // make a copy of wordPixelCoordinates
-
-            var offset = new Coordinate(position.x, position.y);            // So far, offset indicates the center of the word-image
-            offset.apply(this.image.width/2, this.image.height/2);         // ... and now it indicates the top-left corner, i.e. the origin
-
-            for (var i=0; i<backgroundPixelCoordinates.length; i++) {       // apply the offset to all coordinates in backgroundPixelCoordinates
-                var coordinate = backgroundPixelCoordinates[i];
-                coordinate.apply(offset);
-            }
-
-            if (!background.intersection(backgroundPixelCoordinates)) {
-                return position;
-            }
-        }
-        return new Coordinate(300,300);
-    };
-    */
 
     Word.prototype.findPosition = function (background) {
         var componentCoordinates = this.getOrderedCoordinates();        // this is a list of all coordinates for black pixels in this.image, in random order.

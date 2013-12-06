@@ -22,13 +22,17 @@ var Canvas = (function () {
         this.context.clearRect(0, 0, this.element.width, this.element.height);
     };
 
-    Canvas.prototype.writeText = function (text, size, position) {
-        if (position === undefined) {
-            position = new Coordinate(0, 0);
-        }
+    Canvas.prototype.writeText = function (text, size, blur, position) {
+        
+        if (position === undefined) position = new Coordinate(0, 0);
 
         this.context.textBaseline = constants.TEXT_BASELINE;
         this.context.font = constants.FONT_WEIGHT.toString() + ' ' + size.toString() + 'px ' + constants.FONT_NAME;
+        this.context.shadowColor = 'black';
+        
+        if (blur) this.context.shadowBlur = constants.BLUR_RADIUS;
+        else this.context.shadowBlur = 0;
+        
         this.context.fillText(text, position.x, position.y);
     };
 
