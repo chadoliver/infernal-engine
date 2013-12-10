@@ -1,6 +1,7 @@
 
 starter.wait(function () {
 
+
     var map = new google.maps.Map(document.getElementById('map'), {
         center: new google.maps.LatLng(-43.38, 171.22),
         zoom: 11,
@@ -9,6 +10,29 @@ starter.wait(function () {
         disableDefaultUI: true,
         rotateControl: true,
     });
+
+    var markers = [
+        new google.maps.Marker({
+            position: new google.maps.LatLng(-43.38, 171.22),
+            map: map,
+            title: 'Tim'
+        }),
+        new google.maps.Marker({
+            position: new google.maps.LatLng(-43.43, 171.18),
+            map: map,
+            title: 'Jerry'
+        }),
+        new google.maps.Marker({
+            position: new google.maps.LatLng(-43.41, 171.33),
+            map: map,
+            title: 'Russel'
+        }),
+        new google.maps.Marker({
+            position: new google.maps.LatLng(-43.415, 171.34),
+            map: map,
+            title: 'Russel'
+        })
+    ];
 
     var width = 400;
     var height = 300;
