@@ -10,7 +10,7 @@ var Word = (function () {
 
     function Word(text, frequency) {
         var self = this;
-        var size = 10 + 3 * frequency;
+        var size = 15 + 3 * frequency;
 
         this.text = text;
         this.frequency = frequency;

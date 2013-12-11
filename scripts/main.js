@@ -43,12 +43,14 @@ starter.wait(function () {
     
 
     var words = [
-    	new Word('scrub', 11), 
+    	new Word('scrub', 15), 
     	new Word('plume', 10), 
     	new Word('black', 8),
-    	new Word('fire', 7), 
+    	new Word('fire', 6), 
     	new Word('wind-driven', 4),
+        new Word('northerly', 4),
     	new Word('dead', 2),
+
     ];
 
     for (var i=0; i<words.length; i++) words[i].paint(background);
