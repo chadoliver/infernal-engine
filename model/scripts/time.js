@@ -7,6 +7,11 @@
 var Time = (function () { 
 	// This class is used to represent a instant in Simulation Time. 
 
+	var states = {
+		PAST: 'past',
+		FUTURE: 'future',
+	}
+
 	function Time (sampleTime, zeroTime, clock) {
 		
 		this.sampleTime = sampleTime;	// this.sampleTime is the cannonical source of simulation time and real time.
@@ -51,12 +56,6 @@ var Time = (function () {
 			this.timeoutHandle = null;
 		}
 	};
-
-	Time.prototype.scrub = function(sampleTimeSpeedup, simulationTimeOffset) {
-		// This is just a wrapper function so that code can be a bit more self-documenting.
-
-		this.start(sampleTimeSpeedup, simulationTimeOffset);
-	}
 
 	//===== The Inner Processing Layer ============================================================================//
 
