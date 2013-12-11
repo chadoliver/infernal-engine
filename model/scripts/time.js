@@ -4,73 +4,98 @@
 //    moves faster than sample time, and it can be paused and scrubbed.
 //  - Wall Time is the computer time used to calculate when a javascript event should be triggered.
 
-var Countdown = (function () {
-
-	
-	
-})();
-
 var Time = (function () { 
 	// This class is used to represent a instant in Simulation Time. 
 
-	function Time (sampleTime, zeroTime, speedup, clock) {
-
+	function Time (sampleTime, zeroTime, clock) {
 		
-		
-		
-		// this.sampleTime is the cannonical source of simulation time and real time. We assume that it 
-		// doesn't change, since it is initially read in from a static file.
-		this.sampleTime = sampleTime;
+		this.sampleTime = sampleTime;	// this.sampleTime is the cannonical source of simulation time and real time.
+		this.zeroTime = zeroTime;		// this.zeroTime is the Sample Time of the earliest event.
 
-		// this.zeroTime is the Sample Time of the earliest event. That event has a Simulation Time of zero, 
-		// and it is the datum against which all other Simulation Times are measured.
-		this.zeroTime = zeroTime;
-
-		// this.speedup is the degree to which Simulation Time runs faster than Sample Time. A speedup of 3
-		// means that 3 Sample seconds are equivalent to 1 Simulation second.
-		this.speedup = speedup;
-
-		// The instance listens to PAUSE and START events on the upstream source (this.simulationClock), and
-		// it generates IS_ACTIVE and IS_INACTIVE events for downstream sinks (this.subscribers).
-		this.simulationClock = clock;
-		this.state = states.PENDING;
+		this.clock = clock;
+		this.timeout = null;
+		this.temporalState = states.FUTURE;
 		this.subscribers = [];
-		this.timeoutHandle = null;
-
 	}
 
-	Time.prototype.cancelCountdown = function(first_argument) {
+	//===== The Upsteam Interface =================================================================================//
+
+	Time.prototype.start = function(sampleTimeSpeedup, simulationTimeOffset) {
+		
+		this.pause();	// cancel any running timer.
+
+		// simulationTime is the time of a particular instant within the frame of reference of a simulation. It is 
+		// *not* the current time within the simulation.
+		var simulationTime = (this.sampleTime - this.zeroTime) / sampleTimeSpeedup;	
+
+		// Similarly, realTime is the wall-time representation of a particular instant. The current real time is given 
+		// by Date.now().
+		var realTime = simulationTime + simulationTimeOffset;
+
+		// delay is the number of milliseconds between the current real time and the real time of a particular instant 
+		// (specifically, the instant represented by this Time instance). A negative delay means that the instant 
+		// happened in the 'past' (within simulation time, at least).
+		var delay = realTime - Date.now();
+
+		this.updateTemporalState(delay);
+
+		if (delay > 0) {	// it's no use setting a timeout if the event happens in the past.
+			this.timeoutHandle = window.setTimeout(this.onCountdownFires.bind(this), delay);
+		}
+	};
+
+	Time.prototype.pause = function() {
 		
 		if (this.timeoutHandle !== null) {
 			window.clearTimeout(this.timeoutHandle);
+			this.timeoutHandle = null;
 		}
 	};
 
-	Time.prototype.startCountdown = function(sampleTimeSpeedup, simulationTimeOffset) {
-		// body...
-	};
+	Time.prototype.scrub = function(sampleTimeSpeedup, simulationTimeOffset) {
+		// This is just a wrapper function so that code can be a bit more self-documenting.
 
+		this.start(sampleTimeSpeedup, simulationTimeOffset);
+	}
 
+	//===== The Inner Processing Layer ============================================================================//
 
-	Time.prototype.subscribe = function(callback) {
-		// this is used by Person instances, so that they can be notified when 'their' Time instances
-		// are triggered.
+	// These would all be private functions if javascript wasn't written in 10 days.
 
-		this.subscribers.push[callback];
-	};
+	Time.prototype.onCountdownFires = function() {
 
-	Time.prototype.setState = function(state) {
-		this.state = state;
-		for (var i; i<this.subscribers.length; i++) {
-			this.subscribers[i](state);
-		}
-	};
+		this.timeoutHandle = null;
+		this.updateTemporalState(-1);	// any negative number would do here. 
+	}
 
-	Time.prototype.getRealTime = function() {
+	Time.prototype.updateTemporalState = function(delay) {
 		
-		var simulationTime = (this.sampleTime - this.zeroTime) / this.speedup;
-		var realTime = simulationTime + this.simulationClock.getOffset();
+		if ((this.temporalState === states.FUTURE) && (delay <= 0)) {
+			// Hey look, the event just happened! (Or at least, it has happened between now and whenever we
+			// last checked.)
+			
+			this.temporalState = states.PAST;
+			for (var i=0; i<this.subscribers.length; i++) {
+				this.subscribers[i].activate();
+			};
+		}
+		else if ((this.temporalState === states.PAST) && (delay > 0)) {
+			// The event just un-happened! This occurs when the clock is scrubbed to an earlier time.
 
+			this.temporalState = states.FUTURE;
+			for (var i=0; i<this.subscribers.length; i++) {
+				this.subscribers[i].deactivate();
+			};
+		}
+	};
+
+	//===== The Downstream Interface ==============================================================================//
+
+	Time.prototype.subscribe = function(subscriber) {
+		// This is used by Action instances, so that they can be turned on and off based on the time that the Action
+		// occured. Each subscriber object should have an activate() function and a deactivate() function.
+
+		this.subscribers.push[subscriber];
 	};
 
 	return Time;
