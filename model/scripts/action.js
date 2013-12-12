@@ -1,37 +1,3 @@
-var Location = (function () {
-
-	function Location (latitude, longitude) {
-		this.latitude = latitude;
-		this.longitude = longitude;
-	};
-
-	Location.prototype.difference = function(other) {
-		var latitude = this.latitude - other.latitude;
-        var longitude = this.longitude - other.longitude;
-        return new Location(latitude, longitude);
-	};
-
-	Location.prototype.distance = function(other) {
-		var dif = this.difference(other);
-        var distance = Math.sqrt(dif.latitude*dif.latitude + dif.longitude*dif.longitude);
-        return distance;
-	};
-
-	return Location;
-})();
-
-
-var Message = (function () {
-
-	function Message (text) {
-		this.text = text;
-	};
-
-	return Message;
-
-})();
-
-
 var Action = (function () {
 	
 	function Action (personId, timestamp, position, message) {
@@ -40,7 +6,39 @@ var Action = (function () {
 		this.timestamp = timestamp;
 		this.position = position;
 		this.message = message;
+
+		this.isActive = false;
+		this.subscribers = [];
 	}
+
+	Action.prototype.activate = function() {
+		
+		if ( ! this.isActive) {
+			this.isActive = true;
+			console.log('activate');
+			this.notifySubscribers();
+		}
+	};
+
+	Action.prototype.deactivate = function() {
+		
+		if (this.isActive) {
+			this.isActive = false;
+			console.log('deactivate');
+			this.notifySubscribers();
+		}
+	};
+
+	Action.prototype.notifySubscribers = function() {
+
+		for (var i=0; i<this.subscribers.length; i++) {
+			this.subscribers[i].updateOnAction(this);
+		}
+	};
+
+	Action.prototype.subscribe = function(subscriber) {
+		this.subscribers.push(subscriber);
+	};
 
 	return Action;
 })();
