@@ -5,6 +5,7 @@
         <meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no' />
         
         <link rel="stylesheet" href="css/app.css"/>
+        <link href="http://netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.css" rel="stylesheet">
 
         <script src="https://maps.googleapis.com/maps/api/js?sensor=false"></script>
 
@@ -22,9 +23,21 @@
     
     <body>
         <div id='map'></div>
-        <div id='sidebar'>
+        <div id='sidebar' class='floating'>
             <div id='wordcloud'></div>
             <div id='messages'></div>
+        </div>
+
+        <div id='progress'>
+	        <div id="play-pause">
+	        	<img id="play-icon" class="shadow" src="img/play.svg" alt="play" viewBox="10 10 200 150"/>
+	        </div>
+	        <div id='time'>
+				<span id='minutes'>00</span>:<span id="seconds">00</span>
+			</div>
+			<div id="seek-bar">
+				<input type="range" value="0">
+			</div>
         </div>
 
         <script src="scripts/main.js" type="text/javascript"></script>

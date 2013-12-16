@@ -5,7 +5,7 @@ var constants = {
     ALPHA_CHANNEL: 3,
 
     FONT_WEIGHT: 300,
-    FONT_NAME: 'Open Sans Condensed',   //'Open Sans Condensed'
+    FONT_NAME: 'Open Sans',   //'Open Sans Condensed'
     TEXT_BASELINE: 'top',
 
     BLUR_RADIUS: 10,
