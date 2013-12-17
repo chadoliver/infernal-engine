@@ -1,5 +1,5 @@
 var constants = {
-    DEBUG : false,
+    DEBUG: false,
 
     NUM_CHANNELS : 4,
     ALPHA_CHANNEL: 3,
