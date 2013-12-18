@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<vxml version="2.1" xmlns="http://www.w3.org/2001/06/grammar">
+<meta name="Max Lawrie" content="maxlawrie@gmail.com"/>
+	<form id="Char_form">
+		<field name="response">
+		    <!-- Define the grammar. -->
+			<grammar xml:lang="en-us" root = "myrule">
+				<rule id="myrule">
+				  <one-of>
+					<item> Alpha </item>
+					<item> Bravo </item>
+					<item> Charlie </item>
+					<item> Delta </item>
+					<item> Echo </item>
+					<item> Foxtrot </item>
+					<item> Golf </item>
+					<item> Hotel </item>
+					<item> India </item>
+					<item> Juliett </item>
+					<item> Kilo </item>
+					<item> Lima </item>
+					<item> Mike </item>
+					<item> November </item>
+					<item> Oscar </item>
+					<item> Papa </item>
+					<item> Quebec </item>
+					<item> Sierra </item>
+					<item> Tango </item>
+					<item> Uniform </item>
+					<item> Victor </item>
+					<item> Whiskey </item>
+					<!-- <item> X-ray </item> -->
+					<item> Yankee </item>
+					<item> Zulu </item>
+					<item> Zero </item>
+					<item> One </item>
+					<item> Two </item>
+					<item> Three </item>
+					<item> Four </item>
+					<item> Five </item>
+					<item> Six </item>
+					<item> Seven </item>
+					<item> Eight </item>
+					<item> Nine </item>
+				  </one-of>
+				</rule>
+			</grammar>
+		
+		<prompt>
+            <value expr="question"/>
+        </prompt>
+
+        <filled>
+            <return namelist="response"/>
+        </filled>
+      </field>
+  </form>
+</vxml>
+			
