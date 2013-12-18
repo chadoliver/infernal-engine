@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<vxml version = "2.1" xmlns="http://www.w3.org/2001/06/grammar">
+<meta name="Max Lawrie" content="maximo.lawrie@taitradio.com"/>
+	<form id="Plate_form">
+		<subdialog name="Char_1" src="QV_sub.xml">
+			<param name="question" expr="'Please use the phonetic alphabet to say the first character in the plate.'"/>
+			<filled>
+				<goto nextitem="Char_2"/>
+			</filled>
+		</subdialog>
+		<subdialog name="Char_2" src="QV_sub.xml">
+			<param name="question" expr="'And now the second one.'"/>
+			<filled>
+				<goto nextitem="Char_3"/>
+			</filled>
+		</subdialog>
+		<subdialog name="Char_3" src="QV_sub.xml">
+			<param name="question" expr="'And now the third one.'"/>
+			<filled>
+				<goto nextitem="Char_4"/>
+			</filled>
+		</subdialog>
+		<subdialog name="Char_4" src="QV_sub.xml">
+			<param name="question" expr="'And now the fourth one.'"/>
+			<filled>
+				<goto nextitem="Char_5"/>
+			</filled>
+		</subdialog>
+		<subdialog name="Char_5" src="QV_sub.xml">
+			<param name="question" expr="'And now the fifth one.'"/>
+			<filled>
+				<goto nextitem="Char_6"/>
+			</filled>
+		</subdialog>
+		<subdialog name="Char_6" src="QV_sub.xml">
+			<param name="question" expr="'And now the last one.'"/>
+			<filled>
+				<goto nextitem="finish"/>
+			</filled>
+		</subdialog>
+		
+		<block name="finish">
+			<prompt>
+				Querying plate <value expr="Char_1"/><value expr="Char_2"/><value expr="Char_3"/><value expr="Char_4"/><value expr="Char_5"/><value expr="Char_6"/>
+			</prompt>
+		</block>
+
+	</form>
+</vxml>
