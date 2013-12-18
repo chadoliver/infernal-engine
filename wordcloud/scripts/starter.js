@@ -45,7 +45,7 @@ var starter = (function () {
     // WebFont comes from <script src="//ajax.googleapis.com/ajax/libs/webfont/1/webfont.js"></script>
     WebFont.load({
         google: { families: [constants.FONT_NAME + ':' + constants.FONT_WEIGHT] },
-        active: starter.signal.bind(starter),
+        active: starter.signal.bind(starter)
     });
 
     addListener('load', window, starter.signal.bind(starter));

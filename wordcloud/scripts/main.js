@@ -1,32 +1,13 @@
-//var stopwatch = new Stopwatch();
-
 starter.wait(function () {
 
-    var background = new Background('wordcloud');
-    var coordinates = background.getOrderedCoordinates();
+    var wordCloud = new WordCloud('wordcloud', constants.FONT_WEIGHT, constants.FONT_NAME);
 
-    //for (var i = 0; i < Math.min(200000, coordinates.length); i++) coordinates[i].paint(background.canvas);
+    wordCloud.putWord('scrub', 13);
+    wordCloud.putWord('plume', 10);
+    wordCloud.putWord('black', 8);
+    wordCloud.putWord('fire', 7);
+    wordCloud.putWord('wind-driven', 4);
+    wordCloud.putWord('dead', 2);
 
-    
-
-    //stopwatch.start('started');
-
-    var words = [
-    	new Word('scrub', 11), 
-    	new Word('plume', 10), 
-    	new Word('black', 8),
-    	new Word('fire', 7), 
-    	new Word('wind-driven', 4),
-    	new Word('dead', 2),
-    ];
-
-    for (var i=0; i<words.length; i++) words[i].paint(background);
-
-	var center = new Coordinate(300,300);
-	center.paint(background.canvas);
-
-
-    //background.blur(5);
-
-    //stopwatch.stop('stopped');
+    wordCloud.paint();
 });
