@@ -35,6 +35,8 @@ starter.wait(function () {
 
     //===========================================================================================================//
 
+    var startTime = Date.now();
+
     var wordCloud = new WordCloud('wordcloud', constants.FONT_WEIGHT, constants.FONT_NAME);
 
     wordCloud.putWord('scrub', 13);
@@ -45,6 +47,8 @@ starter.wait(function () {
     wordCloud.putWord('dead', 2);
 
     wordCloud.paint();
+
+    console.log('seconds:', (Date.now()-startTime)/1000);
 
     //===========================================================================================================//
 
