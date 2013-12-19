@@ -1,7 +1,4 @@
-(function () {
-
-
-	//===========================================================================================================//
+(function() {
 
 
 	var constants = {
@@ -29,6 +26,7 @@
 
 	var Coordinate = (function() {
 
+		/** @constructor */
 		function Coordinate(x, y) {
 			this.x = x;
 			this.y = y;
@@ -115,6 +113,7 @@
 			return coordinates;
 		}
 
+		/** @constructor */
 		function CoordinateSet(image) {
 			this.coordinates = [];
 			this.width = image.width;
@@ -167,6 +166,7 @@
 
 	var Image = (function() {
 
+		/** @constructor */
 		function Image(imageData) {
 			this.raw = imageData;
 			this.data = imageData.data;
@@ -197,6 +197,7 @@
 
 	var Canvas = (function() {
 
+		/** @constructor */
 		function Canvas(width, height) {
 			this.element = document.createElement("canvas");
 			this.element.width = width;
@@ -265,6 +266,7 @@
 
 	var BoundingBox = (function() {
 
+		/** @constructor */
 		function BoundingBox(image) {
 			this.start = new Coordinate(Infinity, Infinity);
 			this.end = new Coordinate(-Infinity, -Infinity);
@@ -300,6 +302,7 @@
 
 	var Background = (function() {
 
+		/** @constructor */
 		function Background(id) {
 			this.canvas = new Canvas(600, 600).attach(id);
 			this.image = this.readImage();
@@ -359,16 +362,20 @@
 			return canvas.readImage(bbox);
 		};
 
+		/** @constructor */
 		function Word(text, frequency, fontWeight, fontName) {
 			var self = this;
 			var size = 10 + 3 * frequency;
 
 			this.text = text;
 			this.frequency = frequency;
+			/** @private */
 			this.draftImage = getImage(text, size, true, fontWeight, fontName); // get a blurred image that we use to find the word's position.
+			/** @private */
 			this.finalImage = getImage(text, size, false, fontWeight, fontName); // get a normal image that we'll display in the wordcloud.
 		}
 
+		/** @private */
 		Word.prototype.findPosition = function(background) {
 			var componentCoordinates = this.getOrderedCoordinates(); // this is a list of all coordinates for black pixels in this.image, in random order.
 			var candidatePositions = background.getOrderedCoordinates(); // this is a list of all coordinates for pixels in background.image, ordered by distance from the center.
@@ -393,6 +400,7 @@
 			background.write(this.finalImage, position);
 		};
 
+		/** @private */
 		Word.prototype.getOrderedCoordinates = function() {
 			return this.draftImage.getOrderedCoordinates(constants.ordering.RANDOM, constants.whitePixels.EXCLUDE);
 		};
@@ -403,39 +411,41 @@
 
 	//===========================================================================================================//
 
-	
-	var WordCloud = (function () {
-	
-		function WordCloud (id, fontWeight, fontName) {
 
-			this.fontWeight = fontWeight;
-			this.fontName = fontName;
+	var WordCloud = (function() {
 
-			this.background = new Background(id);
+		/** @constructor */
+		function WordCloud(id, fontweight, fontname) {
+
+			/** @private */ this.fontweight = fontweight;
+			/** @private */ this.fontname = fontname;
+			/** @private */ this.bg = new Background(id);
+
 			this.words = [];
 		}
 
 		WordCloud.prototype.putWord = function(text, frequency) {
 
-			if ((text===undefined) || (frequency===undefined)) {
+			if ((text === undefined) || (frequency === undefined)) {
 				console.error('insufficient arguments');
 				return;
 			}
-			
-			var word = new Word(text, frequency, this.fontWeight, this.fontName);
+
+			var word = new Word(text, frequency, this.fontweight, this.fontname);
 			this.words.push(word);
 		};
 
 		WordCloud.prototype.paint = function() {
-			for (var i=0; i<this.words.length; i++) {
-				this.words[i].paint(this.background);
+			for (var i = 0; i < this.words.length; i++) {
+				this.words[i].paint(this.bg);
 			}
 		};
-		
+
 		return WordCloud;
 	})();
 
 	window['WordCloud'] = WordCloud; // <-- Constructor
-	window.WordCloud.prototype['paint'] = WordCloud.prototype.paint;
-	window.WordCloud.prototype['putWord'] = WordCloud.prototype.putWord;
+	window['WordCloud'].prototype['paint'] = WordCloud.prototype.paint;
+	window['WordCloud'].prototype['putWord'] = WordCloud.prototype.putWord;
+
 })();
