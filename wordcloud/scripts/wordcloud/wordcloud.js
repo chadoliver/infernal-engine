@@ -303,8 +303,8 @@
 	var Background = (function() {
 
 		/** @constructor */
-		function Background(id) {
-			this.canvas = new Canvas(600, 600).attach(id);
+		function Background(id, width, height) {
+			this.canvas = new Canvas(width, height).attach(id);
 			this.image = this.readImage();
 		}
 
@@ -316,8 +316,13 @@
 			return this.image.getPixel(position);
 		};
 
-		Background.prototype.write = function(image, position) {
+		Background.prototype.writeImage = function(image, position) {
 			this.canvas.writeImage(image, position);
+			this.image = this.readImage();
+		};
+
+		Background.prototype.writeText = function(text, size, blur, fontWeight, fontName, position) {
+			this.canvas.writeText(text, size, blur, fontWeight, fontName, position);
 			this.image = this.readImage();
 		};
 
@@ -376,6 +381,11 @@
 		}
 
 		/** @private */
+		Word.prototype.getOrderedCoordinates = function() {
+			return this.draftImage.getOrderedCoordinates(constants.ordering.RANDOM, constants.whitePixels.EXCLUDE);
+		};
+
+		/** @private */
 		Word.prototype.findPosition = function(background) {
 			var componentCoordinates = this.getOrderedCoordinates(); // this is a list of all coordinates for black pixels in this.image, in random order.
 			var candidatePositions = background.getOrderedCoordinates(); // this is a list of all coordinates for pixels in background.image, ordered by distance from the center.
@@ -397,12 +407,7 @@
 		Word.prototype.paint = function(background) {
 			var position = this.findPosition(background);
 			console.log(position.x, position.y);
-			background.write(this.finalImage, position);
-		};
-
-		/** @private */
-		Word.prototype.getOrderedCoordinates = function() {
-			return this.draftImage.getOrderedCoordinates(constants.ordering.RANDOM, constants.whitePixels.EXCLUDE);
+			background.writeImage(this.finalImage, position);
 		};
 
 		return Word;
@@ -417,9 +422,12 @@
 		/** @constructor */
 		function WordCloud(id, fontweight, fontname) {
 
+			var width = 350;
+			var height = 300;
+
 			/** @private */ this.fontweight = fontweight;
 			/** @private */ this.fontname = fontname;
-			/** @private */ this.bg = new Background(id);
+			/** @private */ this.bg = new Background(id, width, height);
 
 			this.words = [];
 		}
