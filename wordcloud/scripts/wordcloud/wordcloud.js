@@ -11,7 +11,8 @@
 
 		ordering: {
 			DISTANCE: 0,
-			RANDOM: 1
+			RANDOM: 1,
+			REGULAR: 2
 		},
 
 		whitePixels: {
@@ -28,8 +29,14 @@
 
 		/** @constructor */
 		function Coordinate(x, y) {
-			this.x = x;
-			this.y = y;
+			if (y === undefined) {
+				this.x = x.x;
+				this.y = x.y;
+			} 
+			else {
+				this.x = x;
+				this.y = y;
+			}
 		}
 
 		Coordinate.prototype.apply = function(x, y) {
@@ -67,102 +74,13 @@
 
 		Coordinate.prototype.paint = function(canvas) {
 			canvas.context.fillStyle = 'red';
-			canvas.context.fillRect(this.x, this.y, 1, 1);
+			canvas.context.fillRect(this.x-1, this.y-1, 3, 3);
 		};
 
 		return Coordinate;
 	})();
 
-
 	//===========================================================================================================//
-
-
-	var CoordinateSet = (function() {
-
-		function orderByDistance(coordinates, center) {
-
-			coordinates.sort(function compare(a, b) {
-				var distanceA = a.distance(center);
-				var distanceB = b.distance(center);
-
-				if (distanceA < distanceB) return -1;
-				if (distanceA > distanceB) return 1;
-				else return 0;
-			});
-
-			return coordinates;
-		}
-
-		function randomize(coordinates) {
-
-			var currentIndex = coordinates.length;
-			var temporaryValue = null;
-			var randomIndex = null;
-
-			while (currentIndex !== 0) {
-				// Pick a remaining element...
-				randomIndex = Math.floor(Math.random() * currentIndex);
-				currentIndex -= 1;
-
-				// And swap it with the current element.
-				temporaryValue = coordinates[currentIndex];
-				coordinates[currentIndex] = coordinates[randomIndex];
-				coordinates[randomIndex] = temporaryValue;
-			}
-
-			return coordinates;
-		}
-
-		/** @constructor */
-		function CoordinateSet(image) {
-			this.coordinates = [];
-			this.width = image.width;
-			this.height = image.height;
-			this.image = image;
-
-			for (var y = 0; y < image.height; y++) {
-				for (var x = 0; x < image.width; x++) {
-					var coordinate = new Coordinate(x, y);
-					this.coordinates.push(coordinate);
-				}
-			}
-		}
-
-		CoordinateSet.prototype.filter = function(coordinates, whitePixels) {
-			var coordinates = [];
-
-			if (whitePixels === constants.whitePixels.EXCLUDE) {
-				for (var i = 0; i < this.coordinates.length; i++) {
-					var coordinate = this.coordinates[i];
-					if (this.image.getPixel(coordinate) > 0) {
-						coordinates.push(coordinate);
-					}
-				}
-			} else {
-				coordinates = this.coordinates;
-			}
-
-			return coordinates;
-		};
-
-		CoordinateSet.prototype.getOrderedCoordinates = function(orderType, ignoreWhitePixels) {
-
-			var coordinates = this.filter(this.coordinates, ignoreWhitePixels);
-
-			if (orderType === constants.ordering.DISTANCE) {
-				var center = new Coordinate(this.width / 2, this.height / 2);
-				return orderByDistance(coordinates, center);
-			} else {
-				return randomize(coordinates);
-			}
-		};
-
-		return CoordinateSet;
-	})();
-
-
-	//===========================================================================================================//
-
 
 	var Image = (function() {
 
@@ -172,8 +90,6 @@
 			this.data = imageData.data;
 			this.width = imageData.width;
 			this.height = imageData.height;
-
-			this.coordinateSet = new CoordinateSet(this);
 		}
 
 		Image.prototype.getPixel = function(coordinate) {
@@ -184,16 +100,32 @@
 			return alpha;
 		};
 
-		Image.prototype.getOrderedCoordinates = function(orderType, ignoreWhitePixels) {
-			return this.coordinateSet.getOrderedCoordinates(orderType, ignoreWhitePixels);
+		Image.prototype.getCoordinates = function(whitePixels) {
+			
+			coordinates = [];
+
+			for (var y=0; y<this.height; y++) {
+				for (var x=0; x<this.width; x++) {
+					if (whitePixels == constants.whitePixels.EXCLUDE) {
+						var pixelIndex = constants.NUM_CHANNELS * (y*this.width + x);
+						var alpha = this.data[pixelIndex + constants.ALPHA_CHANNEL];
+						if (alpha > 0) {
+							coordinates.push(new Coordinate(x, y));
+						}
+					}
+					else {
+						coordinates.push(new Coordinate(x, y));
+					}
+				}
+			}
+
+			return coordinates;
 		};
 
 		return Image;
 	})();
 
-
 	//===========================================================================================================//
-
 
 	var Canvas = (function() {
 
@@ -220,7 +152,7 @@
 			this.context.clearRect(0, 0, this.element.width, this.element.height);
 		};
 
-		Canvas.prototype.writeText = function(text, size, blur, fontWeight, fontName, position) {
+		Canvas.prototype.writeText = function(text, size, isBlurred, fontWeight, fontName, position) {
 
 			if (position === undefined) position = new Coordinate(0, 0);
 
@@ -228,7 +160,7 @@
 			this.context.font = fontWeight.toString() + ' ' + size.toString() + 'px ' + fontName;
 			this.context.shadowColor = 'black';
 
-			if (blur) this.context.shadowBlur = constants.BLUR_RADIUS;
+			if (isBlurred) this.context.shadowBlur = constants.BLUR_RADIUS;
 			else this.context.shadowBlur = 0;
 
 			this.context.fillText(text, position.x, position.y);
@@ -258,6 +190,85 @@
 		};
 
 		return Canvas;
+	})();
+
+	//===========================================================================================================//
+
+	var Background = (function() {
+
+		/** @constructor */
+		function Background(width, height, id) {
+			this.width = width;
+			this.height = height;
+
+			this.canvas = new Canvas(width, height);
+			if (id !== undefined) {
+				this.canvas.attach(id);
+			}
+
+			this.image = this.readImage();
+		};
+
+		Background.prototype.readImage = function() {
+			return this.canvas.readImage();
+		};
+
+		Background.prototype.readPixel = function(position) {
+			return this.image.getPixel(position);
+		};
+
+		Background.prototype.writeImage = function(image, position) {
+			this.canvas.writeImage(image, position);
+			this.image = this.readImage();
+		};
+
+		Background.prototype.writeText = function(text, size, isBlurred, fontWeight, fontName, position) {
+			this.canvas.context.fillStyle = 'black';
+			this.canvas.writeText(text, size, isBlurred, fontWeight, fontName, position);
+			this.image = this.readImage();
+		};
+
+		Background.prototype.clear = function() {
+			this.canvas.clear();
+		};
+
+		Background.prototype.intersection = function(subjectCoordinates, offset) {
+
+			for (var i = 0; i < subjectCoordinates.length; i++) {
+
+				var coordinate = subjectCoordinates[i].sum(offset);
+				var pixel = this.readPixel(coordinate);
+
+				if (pixel !== 0) {
+					return true;
+				}
+			}
+
+			// if we get this far, then there was no intersection between the wordcloud and the image.
+			return false;
+		};
+
+		Background.prototype.getCoordinates = function() {
+			// Return a list of all coordinates (effectively, pixels) in the image. The list is ordered by closeness to the center, 
+			// with a small bias to favour pixels closer to the vertical middle of the image.
+
+			coordinates = this.image.getCoordinates(constants.whitePixels.INCLUDE);
+
+			// sort the coordinates by closeness to the center
+			var center = new Coordinate(this.width/2, this.height/2);
+			coordinates.sort(function compare(a, b) {
+				var distanceA = a.distance(center);
+				var distanceB = b.distance(center);
+
+				if (distanceA < distanceB) return -1;
+				if (distanceA > distanceB) return 1;
+				else return 0;
+			});
+
+			return coordinates;
+		};
+
+		return Background;
 	})();
 
 
@@ -300,63 +311,6 @@
 	//===========================================================================================================//
 
 
-	var Background = (function() {
-
-		/** @constructor */
-		function Background(id, width, height) {
-			this.canvas = new Canvas(width, height).attach(id);
-			this.image = this.readImage();
-		}
-
-		Background.prototype.readImage = function() {
-			return this.canvas.readImage();
-		};
-
-		Background.prototype.readPixel = function(position) {
-			return this.image.getPixel(position);
-		};
-
-		Background.prototype.writeImage = function(image, position) {
-			this.canvas.writeImage(image, position);
-			this.image = this.readImage();
-		};
-
-		Background.prototype.writeText = function(text, size, blur, fontWeight, fontName, position) {
-			this.canvas.writeText(text, size, blur, fontWeight, fontName, position);
-			this.image = this.readImage();
-		};
-
-		Background.prototype.clear = function() {
-			this.canvas.clear();
-		};
-
-		Background.prototype.intersection = function(subjectCoordinates, offset) {
-
-			for (var i = 0; i < subjectCoordinates.length; i++) {
-
-				var coordinate = subjectCoordinates[i].sum(offset);
-				var pixel = this.readPixel(coordinate);
-
-				if (pixel !== 0) {
-					return true;
-				}
-			}
-
-			// if we get this far, then there was no intersection between the wordcloud and the image.
-			return false;
-		};
-
-		Background.prototype.getOrderedCoordinates = function() {
-			return this.image.getOrderedCoordinates(constants.ordering.DISTANCE, constants.whitePixels.INCLUDE);
-		};
-
-		return Background;
-	})();
-
-
-	//===========================================================================================================//
-
-
 	var Word = (function() {
 
 		var getImage = function(text, size, isBlurred, fontWeight, fontName) {
@@ -370,44 +324,80 @@
 		/** @constructor */
 		function Word(text, frequency, fontWeight, fontName) {
 			var self = this;
-			var size = 10 + 3 * frequency;
-
+			
 			this.text = text;
-			this.frequency = frequency;
-			/** @private */
-			this.draftImage = getImage(text, size, true, fontWeight, fontName); // get a blurred image that we use to find the word's position.
-			/** @private */
-			this.finalImage = getImage(text, size, false, fontWeight, fontName); // get a normal image that we'll display in the wordcloud.
+			this.size = 10 + 3 * frequency;
+			this.fontWeight = fontWeight;
+			this.fontName = fontName;
 		}
 
 		/** @private */
-		Word.prototype.getOrderedCoordinates = function() {
-			return this.draftImage.getOrderedCoordinates(constants.ordering.RANDOM, constants.whitePixels.EXCLUDE);
-		};
-
-		/** @private */
 		Word.prototype.findPosition = function(background) {
-			var componentCoordinates = this.getOrderedCoordinates(); // this is a list of all coordinates for black pixels in this.image, in random order.
-			var candidatePositions = background.getOrderedCoordinates(); // this is a list of all coordinates for pixels in background.image, ordered by distance from the center.
+			
+			var position = null;
 
-			for (var i = 0; i < candidatePositions.length; i++) {
-				var position = candidatePositions[i];
+			var canvas = new Canvas(600, 200);
+			canvas.writeText(this.text, this.size, false, this.fontWeight, this.fontName);
+			var fullImage = canvas.readImage();
+			var bbox = new BoundingBox(fullImage);
+			var image = canvas.readImage(bbox);
 
-				var x = Math.floor(position.x - this.draftImage.width / 2);
-				var y = Math.floor(position.y - this.draftImage.height / 2);
-				var offset = new Coordinate(x, y);
+			var componentCoordinates = image.getCoordinates(constants.whitePixels.EXCLUDE); // this is a list of all coordinates for black pixels in this.image
+			var candidatePositions = background.getCoordinates(); // this is a list of all coordinates for pixels in background.image, ordered by distance from the center.
 
-				if (!background.intersection(componentCoordinates, offset)) {
-					return position;
+			// Iterate through all possible positions where the word could be placed, and return the first position 
+			// which doesn't cause the word to intersect with any other words. Note that the possible positions are
+			// ordered by distance to the center (closest first) so the *first* non-intersecting position will also be 
+			// the *most central* non-intersecting position.
+			var len = candidatePositions.length;
+			for (var i=0; i<len; i++) {
+				var candidate = candidatePositions[i];
+
+				var x = Math.floor(candidate.x - image.width/2);
+				var y = Math.floor(candidate.y - image.height/2);
+				var topLeft = new Coordinate(x, y);
+
+				if (!background.intersection(componentCoordinates, topLeft)) {
+					position = candidate;
+					break;
 				}
 			}
-			return new Coordinate(300, 300);
+
+			if (position === null) {
+				// the default position is the center of the image.
+				var x = Math.floor(background.width/2);		// - bbox.start.x - image.width/2
+				var y = Math.floor(background.height/2);	// - bbox.start.y - image.height/2
+				var position = new Coordinate(x, y);
+			}
+
+			return {
+				wordCenter: position,
+				boundingBox: bbox
+			};
 		};
 
-		Word.prototype.paint = function(background) {
-			var position = this.findPosition(background);
-			console.log(position.x, position.y);
-			background.writeImage(this.finalImage, position);
+		Word.prototype.paint = function(draftBackground, finalBackground) {
+
+			var retval = this.findPosition(draftBackground);
+			var wordCenter = retval.wordCenter;
+			var boundingBox = retval.boundingBox;
+			
+			var position = {
+				x: wordCenter.x - boundingBox.width/2 - boundingBox.start.x,
+				y: wordCenter.y - boundingBox.height/2 - boundingBox.start.y
+			};
+
+			draftBackground.writeText(this.text, this.size, true, this.fontWeight, this.fontName, position);
+			finalBackground.writeText(this.text, this.size, false, this.fontWeight, this.fontName, position);
+
+			boundingBox.start = {
+				x: wordCenter.x - boundingBox.width/2,
+				y: wordCenter.y - boundingBox.height/2
+			};
+			//boundingBox.paint(finalBackground.canvas, 'red');
+
+			var cloudCenter = new Coordinate(wordCenter);
+			//cloudCenter.paint(finalBackground.canvas);
 		};
 
 		return Word;
@@ -427,7 +417,9 @@
 
 			/** @private */ this.fontweight = fontweight;
 			/** @private */ this.fontname = fontname;
-			/** @private */ this.bg = new Background(id, width, height);
+			
+			/** @private */ this.draftBackground = new Background(width, height, undefined);
+			/** @private */ this.finalBackground = new Background(width, height, 'wordcloud');
 
 			this.words = [];
 		}
@@ -444,8 +436,9 @@
 		};
 
 		WordCloud.prototype.paint = function() {
-			for (var i = 0; i < this.words.length; i++) {
-				this.words[i].paint(this.bg);
+			for (var i=0; i<this.words.length; i++) {
+				var word = this.words[i];
+				word.paint(this.draftBackground, this.finalBackground);
 			}
 		};
 
