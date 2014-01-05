@@ -43,8 +43,14 @@ starter.wait(function () {
     wordCloud.putWord('plume', 10);
     wordCloud.putWord('black', 8);
     wordCloud.putWord('fire', 7);
+    wordCloud.putWord('jiff', 5);
     wordCloud.putWord('wind-driven', 4);
-    wordCloud.putWord('dead', 2);
+    wordCloud.putWord('dead', 3);
+    wordCloud.putWord('newsgirl', 2);
+    wordCloud.putWord('wooler', 2);
+    wordCloud.putWord('triskele', 2);
+    wordCloud.putWord('gasp', 2);
+    wordCloud.putWord('hennig', 1);
 
     wordCloud.paint();
 
