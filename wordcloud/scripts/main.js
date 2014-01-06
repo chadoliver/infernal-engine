@@ -46,7 +46,7 @@ starter.wait(function () {
     wordCloud.putWord('jiff', 5);
     wordCloud.putWord('wind-driven', 4);
     wordCloud.putWord('dead', 3);
-    wordCloud.putWord('newsgirl', 2);
+    wordCloud.putWord('cheese', 2);
     wordCloud.putWord('wooler', 2);
     wordCloud.putWord('triskele', 2);
     wordCloud.putWord('gasp', 2);
