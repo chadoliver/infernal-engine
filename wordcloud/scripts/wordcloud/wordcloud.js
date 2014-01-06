@@ -9,6 +9,9 @@
 		TEXT_BASELINE: 'top',
 		BLUR_RADIUS: 8,
 
+		HORIZONTAL_SCALING_FACTOR: 1,
+		VERTICAL_SCALING_FACTOR: 1.5,
+
 		whitePixels: {
 			EXCLUDE: 0,
 			INCLUDE: 1
@@ -60,10 +63,10 @@
 		};
 
 		Coordinate.prototype.distance = function(other) {
-			var deltaX = this.x - other.x;
-			var deltaY = this.y - other.y;
+			var deltaX = (this.x - other.x) * constants.HORIZONTAL_SCALING_FACTOR;
+			var deltaY = (this.y - other.y) * constants.VERTICAL_SCALING_FACTOR;
 
-			var distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+			var distance = Math.sqrt(deltaX*deltaX + deltaY*deltaY);
 			return distance;
 		};
 
