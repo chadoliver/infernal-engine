@@ -6,6 +6,8 @@
 		NUM_CHANNELS: 4,
 		ALPHA_CHANNEL: 3,
 
+		TEXT_SIZE_CONSTANT: 10,
+		TEXT_SIZE_MULTIPLIER: 3,
 		TEXT_BASELINE: 'top',
 		BLUR_RADIUS: 8,
 
@@ -323,7 +325,7 @@
 			var self = this;
 
 			this.text = text;
-			this.size = 10 + 3 * frequency;
+			this.size = constants.TEXT_SIZE_CONSTANT + constants.TEXT_SIZE_MULTIPLIER * frequency;
 			this.fontWeight = fontWeight;
 			this.fontName = fontName;
 		}
