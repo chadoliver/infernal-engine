@@ -2,7 +2,7 @@ var Model = (function () {
 	
 	function Model (actions) {
 
-		this.timeLord = new TimeLord();
+		this.clock = new Clock();
 		this.people = new PersonSet();
 		
 		for (var i=0; i<actions.length; i++) {
