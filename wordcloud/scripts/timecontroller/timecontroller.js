@@ -10,7 +10,7 @@
 	//===========================================================================================================//
 
 
-	var PlayPauseButton = (function () {
+	var PlayPauseButton = (function() {
 		// PlayPauseButton models the play/pause button, obviously. TimeController subscribes to this, so that 
 		// pressing the button will toggle the progression of simulationTime throughout the webapp.
 
@@ -18,31 +18,28 @@
 			PAUSE: 'pause',
 			PLAY: 'play',
 		};
-	
-		function PlayPauseButton () {
-			
-			this.subscribers = [];
-			this.buttonType = buttonTypes.PLAY;	// time is paused, and the play button is displayed.
 
-			this.element = document.getElementById('play-button');
+		function PlayPauseButton() {
+
+			this.subscribers = [];
+			this.buttonType = buttonTypes.PLAY; // time is paused, and the play button is displayed.
+
+			this.element = document.getElementById('play-icon');
 			this.element.addEventListener("click", this.toggle.bind(this));
 		}
 
 		PlayPauseButton.prototype.toggle = function() {
-			
+
 			if (this.buttonType === buttonTypes.PLAY) {
 				this.play();
-			}
-			else if (this.buttonType === buttonTypes.PAUSE) {
+			} else if (this.buttonType === buttonTypes.PAUSE) {
 				this.pause();
 			}
 		};
 
 		PlayPauseButton.prototype.play = function() {
 
-			if (this.buttonType !== buttonTypes.PLAY) return;
-
-			for (var i=0; i<this.subscribers.length; i++) {
+			for (var i = 0; i < this.subscribers.length; i++) {
 				this.subscribers[i].start();
 			};
 			this.buttonType = buttonTypes.PAUSE;
@@ -51,9 +48,7 @@
 
 		PlayPauseButton.prototype.pause = function() {
 
-			if (this.buttonType !== buttonTypes.PAUSE) return;
-			
-			for (var i=0; i<this.subscribers.length; i++) {
+			for (var i = 0; i < this.subscribers.length; i++) {
 				this.subscribers[i].pause();
 			};
 			this.buttonType = buttonTypes.PLAY;
@@ -61,9 +56,10 @@
 		};
 
 		PlayPauseButton.prototype.subscribe = function(subscriber) {
-			this.subscribers.push[subscriber];
+			console.log('subscribing to playPauseButton');
+			this.subscribers.push(subscriber);
 		};
-	
+
 		return PlayPauseButton;
 	})();
 
@@ -71,7 +67,7 @@
 	//===========================================================================================================//
 
 
-	var TimeController = (function () {
+	var TimeController = (function() {
 		// Clock is the central location for managing the current simulation time. With this class,
 		// all subscribed Time instances can be paused, resumed, and scrubbed at the same time.
 
@@ -80,22 +76,22 @@
 			ACTIVE: 'active',
 		};
 
-		function TimeController (playPauseButton, sampleTimeSpeedup) {
+		function TimeController(playPauseButton, sampleTimeSpeedup) {
 
 			this.elements = {
-			    minutes: document.getElementById('minutes'),
-			    seconds: document.getElementById('seconds'),
-			    scrubber: document.getElementById('scrubber'),
-			    start: document.getElementById('start'),
-			    pause: document.getElementById('pause')
+				minutes: document.getElementById('minutes'),
+				seconds: document.getElementById('seconds'),
+				scrubber: document.getElementById('scrubber'),
+				start: document.getElementById('start'),
+				pause: document.getElementById('pause')
 			};
 
 			this.sampleTimeSpeedup = sampleTimeSpeedup || 1;
-			
+
 			this.subscribers = [];
 			this.state = states.PAUSED;
 
-			this.synchron = {		// Synchron stores the Simulation Time and Real Time representations of a single instant.
+			this.synchron = { // Synchron stores the Simulation Time and Real Time representations of a single instant.
 				real: Date.now(),
 				simulation: 0,
 			};
@@ -108,8 +104,7 @@
 
 			if (this.state === states.PAUSED) {
 				this.start();
-			}
-			else if (this.state === states.ACTIVE) {
+			} else if (this.state === states.ACTIVE) {
 				this.pause();
 			}
 		};
@@ -118,11 +113,11 @@
 			// Allow simulation time to begin or resume.
 
 			if (this.state !== states.ACTIVE) {
-				this.synchron.real = Date.now();	// When the clock is paused, simulation time doesn't change but real time does.
+				this.synchron.real = Date.now(); // When the clock is paused, simulation time doesn't change but real time does.
 				this.state = states.ACTIVE;
 
 				var offset = this.synchron.real - this.synchron.simulation;
-				for (var i=0; i<this.subscribers.length; i++) {
+				for (var i = 0; i < this.subscribers.length; i++) {
 					this.subscribers[i].start(this.sampleTimeSpeedup, offset);
 				};
 			}
@@ -137,7 +132,7 @@
 				this.synchron.real = now;
 				this.state = states.PAUSED;
 
-				for (var i=0; i<this.subscribers.length; i++) {
+				for (var i = 0; i < this.subscribers.length; i++) {
 					this.subscribers[i].pause();
 				};
 			}
@@ -153,18 +148,19 @@
 				this.synchron.real = Date.now();
 
 				var offset = this.synchron.real - this.synchron.simulation;
-				for (var i=0; i<this.subscribers.length; i++) {
+				for (var i = 0; i < this.subscribers.length; i++) {
 					this.subscribers[i].start(this.sampleTimeSpeedup, offset);
 				};
 			}
 		};
 
 		TimeController.prototype.subscribe = function(subscriber) {
-			this.subscribers.push[subscriber];
+			console.log('subscribing to timeController');
+			this.subscribers.push(subscriber);
 		};
 
 		TimeController.prototype.getTime = function() {
-			
+
 			var realOffset = 0;
 			if (this.state === states.ACTIVE) {
 				realOffset = Date.now() - this.synchron.real;
@@ -173,9 +169,9 @@
 		};
 
 		return TimeController;
-	});
+	})();
 
-	
+
 	//===========================================================================================================//
 
 
@@ -189,7 +185,7 @@
 
 		function Clock(timeController, zeroTime) {
 
-			this.zeroTime = zeroTime*1000 || 0;
+			this.zeroTime = zeroTime * 1000 || 0;
 			this.sampleTimeSpeedup = null;
 			this.simulationTimeOffset = null;
 			this.intervalHandle = null;
@@ -246,12 +242,12 @@
 	})();
 
 	var sampleTimeSpeedup = 10;
-	var zeroTime = 60*60;	// 1 hour
+	var zeroTime = 60 * 60; // 1 hour
 
 	var playPauseButton = new PlayPauseButton();
-	var timeController = new TimeController(playPauseButton, sampleTimeSpeedup)
+	var timeController = new TimeController(playPauseButton, sampleTimeSpeedup);
 	var clock = new Clock(timeController, zeroTime);
-	
+
 	playPauseButton.play();
 
 })();
