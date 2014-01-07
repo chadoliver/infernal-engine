@@ -76,25 +76,26 @@ body {
 
 #play-icon {
     height: 30px;
+    cursor: pointer;
 }
 
 #time {
     position: relative;
     float: right;
     text-align: center;
-    width: 70px;
+    width: 130px;
     height: 100%;
 }
 
-#seek-bar {
+#scrubber {
     position: relative;
     padding: 0;
     margin-left: 50px;
-    margin-right: 90px;
+    margin-right: 150px;
     height: 100%;
 }
 
-#seek-bar input {
+#scrubber input {
     width: 100%;
     margin-top: 13px;
     /*padding-top: 20px;*/
