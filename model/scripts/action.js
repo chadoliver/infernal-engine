@@ -1,10 +1,10 @@
 var Action = (function () {
 	
-	function Action (personId, timestamp, position, message) {
+	function Action (personId, timestamp, location, message) {
 
 		this.personId = personId;
 		this.timestamp = timestamp;
-		this.position = position;
+		this.location = location;
 		this.message = message;
 
 		this.isActive = false;
