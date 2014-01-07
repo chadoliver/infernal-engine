@@ -58,28 +58,8 @@ starter.wait(function () {
 
     //===========================================================================================================//
 
-    var elements = {
-        minutes: document.getElementById('minutes'),
-        seconds: document.getElementById('seconds'),
-    };
+    var sampleTimeSpeedup = 10;
+    var zeroTime = 60 * 60; // 1 hour
 
-    var counters = {
-        minutes: 0,
-        seconds: 0,
-    };
-
-    var pad = function (number) {
-        return ("0" + number.toString()).slice(-2);
-    };
-    
-    var timer = window.setInterval(function() {
-
-        counters.seconds++;
-        if (counters.seconds >= 60) {
-            counters.minutes++;
-            counters.seconds = 0;
-            elements.minutes.innerHTML = pad(counters.minutes);
-        } 
-        elements.seconds.innerHTML = pad(counters.seconds);
-    }, 1000);
+    var timeController = new TimeController(zeroTime, sampleTimeSpeedup);
 });

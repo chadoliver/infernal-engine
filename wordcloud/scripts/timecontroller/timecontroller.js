@@ -67,6 +67,76 @@
 	//===========================================================================================================//
 
 
+	var Clock = (function() {
+		// Clock is the class which encapsulates the digital clock in the bottom right of the web page. This 
+		// class is just a View component; it doesn't do anything except update the time on the screen.
+
+		var padNumber = function(number) {
+			return ("0" + number.toString()).slice(-2);
+		};
+
+		function Clock(timeController, zeroTime) {
+
+			this.zeroTime = zeroTime * 1000 || 0;
+			this.sampleTimeSpeedup = null;
+			this.simulationTimeOffset = null;
+			this.intervalHandle = null;
+
+			this.elements = {
+				hours: document.getElementById('hours'),
+				minutes: document.getElementById('minutes'),
+				seconds: document.getElementById('seconds'),
+				slider: document.getElementById('scrubber').getElementsByTagName('input')[0]
+			};
+
+			timeController.subscribe(this);
+		}
+
+		Clock.prototype.start = function(sampleTimeSpeedup, simulationTimeOffset) {
+
+			this.pause(); // cancel any running timer.
+
+			this.sampleTimeSpeedup = sampleTimeSpeedup;
+			this.simulationTimeOffset = simulationTimeOffset;
+
+			this.updateScreen();
+			this.intervalHandle = setInterval(this.updateScreen.bind(this), 50); // update the screen every tenth of a second.
+		};
+
+		Clock.prototype.pause = function() {
+
+			if (this.intervalHandle !== null) {
+				clearInterval(this.intervalHandle);
+				this.intervalHandle = null;
+			}
+		};
+
+		Clock.prototype.updateScreen = function() {
+
+			var simulationTime = Date.now() - this.simulationTimeOffset
+			var rawSampleTime = simulationTime * this.sampleTimeSpeedup + this.zeroTime; // in milliseconds
+			var trimmed = Math.floor(rawSampleTime / 1000);
+
+			var seconds = Math.floor(trimmed % 60);
+			trimmed = trimmed / 60;
+
+			var minutes = Math.floor(trimmed % 60);
+			trimmed = trimmed / 60;
+
+			var hours = Math.floor(trimmed % 24);
+
+			this.elements.hours.innerHTML = padNumber(hours);
+			this.elements.minutes.innerHTML = padNumber(minutes);
+			this.elements.seconds.innerHTML = padNumber(seconds);
+		};
+
+		return Clock;
+	})();
+
+
+	//===========================================================================================================//
+
+
 	var TimeController = (function() {
 		// Clock is the central location for managing the current simulation time. With this class,
 		// all subscribed Time instances can be paused, resumed, and scrubbed at the same time.
@@ -76,15 +146,7 @@
 			ACTIVE: 'active',
 		};
 
-		function TimeController(playPauseButton, sampleTimeSpeedup) {
-
-			this.elements = {
-				minutes: document.getElementById('minutes'),
-				seconds: document.getElementById('seconds'),
-				scrubber: document.getElementById('scrubber'),
-				start: document.getElementById('start'),
-				pause: document.getElementById('pause')
-			};
+		function TimeController(zeroTime, sampleTimeSpeedup) {
 
 			this.sampleTimeSpeedup = sampleTimeSpeedup || 1;
 
@@ -96,7 +158,12 @@
 				simulation: 0,
 			};
 
+			var clock = new Clock(this, zeroTime);
+
+			var playPauseButton = new PlayPauseButton();
 			playPauseButton.subscribe(this);
+			playPauseButton.play();
+			
 		}
 
 		TimeController.prototype.toggle = function() {
@@ -172,82 +239,8 @@
 	})();
 
 
-	//===========================================================================================================//
-
-
-	var Clock = (function() {
-		// Clock is the class which encapsulates the digital clock in the bottom right of the web page. This 
-		// class is just a View component; it doesn't do anything except update the time on the screen.
-
-		var padNumber = function(number) {
-			return ("0" + number.toString()).slice(-2);
-		};
-
-		function Clock(timeController, zeroTime) {
-
-			this.zeroTime = zeroTime * 1000 || 0;
-			this.sampleTimeSpeedup = null;
-			this.simulationTimeOffset = null;
-			this.intervalHandle = null;
-
-			this.elements = {
-				hours: document.getElementById('hours'),
-				minutes: document.getElementById('minutes'),
-				seconds: document.getElementById('seconds'),
-				slider: document.getElementById('scrubber').getElementsByTagName('input')[0]
-			};
-
-			timeController.subscribe(this);
-		}
-
-		Clock.prototype.start = function(sampleTimeSpeedup, simulationTimeOffset) {
-
-			this.pause(); // cancel any running timer.
-
-			this.sampleTimeSpeedup = sampleTimeSpeedup;
-			this.simulationTimeOffset = simulationTimeOffset;
-
-			this.updateScreen();
-			this.intervalHandle = setInterval(this.updateScreen.bind(this), 50); // update the screen every tenth of a second.
-		};
-
-		Clock.prototype.pause = function() {
-
-			if (this.intervalHandle !== null) {
-				clearInterval(this.intervalHandle);
-				this.intervalHandle = null;
-			}
-		};
-
-		Clock.prototype.updateScreen = function() {
-
-			var simulationTime = Date.now() - this.simulationTimeOffset
-			var rawSampleTime = simulationTime * this.sampleTimeSpeedup + this.zeroTime; // in milliseconds
-			var trimmed = Math.floor(rawSampleTime / 1000);
-
-			var seconds = Math.floor(trimmed % 60);
-			trimmed = trimmed / 60;
-
-			var minutes = Math.floor(trimmed % 60);
-			trimmed = trimmed / 60;
-
-			var hours = Math.floor(trimmed % 24);
-
-			this.elements.hours.innerHTML = padNumber(hours);
-			this.elements.minutes.innerHTML = padNumber(minutes);
-			this.elements.seconds.innerHTML = padNumber(seconds);
-		};
-
-		return Clock;
-	})();
-
-	var sampleTimeSpeedup = 10;
-	var zeroTime = 60 * 60; // 1 hour
-
-	var playPauseButton = new PlayPauseButton();
-	var timeController = new TimeController(playPauseButton, sampleTimeSpeedup);
-	var clock = new Clock(timeController, zeroTime);
-
-	playPauseButton.play();
+	window['TimeController'] = TimeController; // <-- Constructor
+	window['TimeController'].prototype['subscribe'] = TimeController.prototype.subscribe;
+	window['TimeController'].prototype['getTime'] = TimeController.prototype.getTime;
 
 })();
