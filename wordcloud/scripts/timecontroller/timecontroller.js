@@ -24,18 +24,14 @@
 			this.subscribers = [];
 			this.buttonType = buttonTypes.PLAY; // time is paused, and the play button is displayed.
 
-			this.element = document.getElementById('play-icon');
-			this.element.addEventListener("click", this.toggle.bind(this));
+			this.elements = {
+				play: document.getElementById('play-icon'),
+				pause: document.getElementById('pause-icon')
+			};
+
+			this.elements.play.addEventListener("click", this.play.bind(this));
+			this.elements.pause.addEventListener("click", this.pause.bind(this));
 		}
-
-		PlayPauseButton.prototype.toggle = function() {
-
-			if (this.buttonType === buttonTypes.PLAY) {
-				this.play();
-			} else if (this.buttonType === buttonTypes.PAUSE) {
-				this.pause();
-			}
-		};
 
 		PlayPauseButton.prototype.play = function() {
 
@@ -43,7 +39,8 @@
 				this.subscribers[i].start();
 			};
 			this.buttonType = buttonTypes.PAUSE;
-			// change button image
+			this.elements.play.style.display  = 'none';
+			this.elements.pause.style.display = 'block';
 		};
 
 		PlayPauseButton.prototype.pause = function() {
@@ -52,7 +49,8 @@
 				this.subscribers[i].pause();
 			};
 			this.buttonType = buttonTypes.PLAY;
-			// change button image
+			this.elements.play.style.display  = 'block';
+			this.elements.pause.style.display = 'none';
 		};
 
 		PlayPauseButton.prototype.subscribe = function(subscriber) {

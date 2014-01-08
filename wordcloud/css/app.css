@@ -79,6 +79,12 @@ body {
     cursor: pointer;
 }
 
+#pause-icon {
+    height: 30px;
+    cursor: pointer;
+    display: none;
+}
+
 #time {
     position: relative;
     float: right;
