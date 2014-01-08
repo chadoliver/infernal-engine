@@ -215,7 +215,7 @@
 	
 	window['Action']['isActive'] = Action.isActive;
 	window['Action']['personId'] = Action.personId;
-	window['Action']['timestamp'] = Action.timestamp;
+	window['Action']['sampleTime'] = Action.sampleTime;
 	window['Action']['message'] = Action.message;
 	window['Action']['message']['text'] = Action.message.text;
 
