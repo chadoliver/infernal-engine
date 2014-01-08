@@ -62,4 +62,6 @@ starter.wait(function () {
     var zeroTime = 60 * 60; // 1 hour
 
     var timeController = new TimeController(zeroTime, sampleTimeSpeedup);
+
+    window['timeController'] = timeController; 
 });
