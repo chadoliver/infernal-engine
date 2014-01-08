@@ -12,6 +12,7 @@ var Action = (function () {
 	}
 
 	Action.prototype.activate = function() {
+		// this is called by the Action's associated Time instance.
 		
 		if ( ! this.isActive) {
 			this.isActive = true;
@@ -21,6 +22,7 @@ var Action = (function () {
 	};
 
 	Action.prototype.deactivate = function() {
+		// this is called by the Action's associated Time instance.
 		
 		if (this.isActive) {
 			this.isActive = false;
