@@ -16,7 +16,7 @@
 
 		var buttonTypes = {
 			PAUSE: 'pause',
-			PLAY: 'play',
+			PLAY: 'play'
 		};
 
 		function PlayPauseButton() {
@@ -29,8 +29,8 @@
 				pause: document.getElementById('pause-icon')
 			};
 
-			this.elements.play.addEventListener("click", this.play.bind(this));
-			this.elements.pause.addEventListener("click", this.pause.bind(this));
+			this.elements.play.addEventListener("click", this.play.bind(this), true);
+			this.elements.pause.addEventListener("click", this.pause.bind(this), true);
 		}
 
 		PlayPauseButton.prototype.play = function() {
@@ -141,7 +141,7 @@
 
 		var states = {
 			PAUSED: 'paused',
-			ACTIVE: 'active',
+			ACTIVE: 'active'
 		};
 
 		function TimeController(zeroTime, sampleTimeSpeedup) {
@@ -153,7 +153,7 @@
 
 			this.synchron = { // Synchron stores the Simulation Time and Real Time representations of a single instant.
 				real: Date.now(),
-				simulation: 0,
+				simulation: 0
 			};
 
 			var clock = new Clock(this, zeroTime);
