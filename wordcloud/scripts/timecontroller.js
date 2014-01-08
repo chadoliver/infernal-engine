@@ -21,7 +21,7 @@
 
 		function PlayPauseButton() {
 
-			this.subscribers = [];
+			this.listeners = [];
 			this.buttonType = buttonTypes.PLAY; // time is paused, and the play button is displayed.
 
 			this.elements = {
@@ -35,8 +35,8 @@
 
 		PlayPauseButton.prototype.play = function() {
 
-			for (var i = 0; i < this.subscribers.length; i++) {
-				this.subscribers[i].start();
+			for (var i = 0; i < this.listeners.length; i++) {
+				this.listeners[i].start();
 			};
 			this.buttonType = buttonTypes.PAUSE;
 			this.elements.play.style.display  = 'none';
@@ -45,17 +45,17 @@
 
 		PlayPauseButton.prototype.pause = function() {
 
-			for (var i = 0; i < this.subscribers.length; i++) {
-				this.subscribers[i].pause();
+			for (var i = 0; i < this.listeners.length; i++) {
+				this.listeners[i].pause();
 			};
 			this.buttonType = buttonTypes.PLAY;
 			this.elements.play.style.display  = 'block';
 			this.elements.pause.style.display = 'none';
 		};
 
-		PlayPauseButton.prototype.subscribe = function(subscriber) {
-			console.log('subscribing to playPauseButton');
-			this.subscribers.push(subscriber);
+		PlayPauseButton.prototype.registerListener = function(listener) {
+			console.log('listening to playPauseButton');
+			this.listeners.push(listener);
 		};
 
 		return PlayPauseButton;
@@ -73,7 +73,7 @@
 			return ("0" + number.toString()).slice(-2);
 		};
 
-		function Clock(timeController, zeroTime) {
+		function Clock(zeroTime) {
 
 			this.zeroTime = zeroTime * 1000 || 0;
 			this.sampleTimeSpeedup = null;
@@ -86,8 +86,6 @@
 				seconds: document.getElementById('seconds'),
 				slider: document.getElementById('scrubber').getElementsByTagName('input')[0]
 			};
-
-			timeController.subscribe(this);
 		}
 
 		Clock.prototype.start = function(sampleTimeSpeedup, simulationTimeOffset) {
@@ -146,9 +144,10 @@
 
 		function TimeController(zeroTime, sampleTimeSpeedup) {
 
+			this.zeroTime = zeroTime || 0;
 			this.sampleTimeSpeedup = sampleTimeSpeedup || 1;
 
-			this.subscribers = [];
+			this.listeners = [];
 			this.state = states.PAUSED;
 
 			this.synchron = { // Synchron stores the Simulation Time and Real Time representations of a single instant.
@@ -156,12 +155,13 @@
 				simulation: 0
 			};
 
-			var clock = new Clock(this, zeroTime);
-
 			var playPauseButton = new PlayPauseButton();
-			playPauseButton.subscribe(this);
+			var clock = new Clock(this, this.zeroTime);
+
+			this.registerListener(clock);
+			playPauseButton.registerListener(this);
+
 			playPauseButton.play();
-			
 		}
 
 		TimeController.prototype.toggle = function() {
@@ -182,8 +182,8 @@
 				this.state = states.ACTIVE;
 
 				var offset = this.synchron.real - this.synchron.simulation;
-				for (var i = 0; i < this.subscribers.length; i++) {
-					this.subscribers[i].start(this.sampleTimeSpeedup, offset);
+				for (var i = 0; i < this.listeners.length; i++) {
+					this.listeners[i].start(this.sampleTimeSpeedup, offset);
 				};
 			}
 		};
@@ -197,8 +197,8 @@
 				this.synchron.real = now;
 				this.state = states.PAUSED;
 
-				for (var i = 0; i < this.subscribers.length; i++) {
-					this.subscribers[i].pause();
+				for (var i = 0; i < this.listeners.length; i++) {
+					this.listeners[i].pause();
 				};
 			}
 		};
@@ -213,15 +213,15 @@
 				this.synchron.real = Date.now();
 
 				var offset = this.synchron.real - this.synchron.simulation;
-				for (var i = 0; i < this.subscribers.length; i++) {
-					this.subscribers[i].start(this.sampleTimeSpeedup, offset);
+				for (var i = 0; i < this.listeners.length; i++) {
+					this.listeners[i].start(this.sampleTimeSpeedup, offset);
 				};
 			}
 		};
 
-		TimeController.prototype.subscribe = function(subscriber) {
-			console.log('subscribing to timeController');
-			this.subscribers.push(subscriber);
+		TimeController.prototype.registerListener = function(listener) {
+			console.log('listening to timeController');
+			this.listeners.push(listener);
 		};
 
 		TimeController.prototype.getTime = function() {
@@ -238,6 +238,11 @@
 
 
 	window['TimeController'] = TimeController; // <-- Constructor
+
+	window['TimeController'].prototype['start'] = TimeController.prototype.start;
+	window['TimeController'].prototype['pause'] = TimeController.prototype.pause;
+	window['TimeController'].prototype['scrub'] = TimeController.prototype.scrub;
+
 	window['TimeController'].prototype['subscribe'] = TimeController.prototype.subscribe;
 	window['TimeController'].prototype['getTime'] = TimeController.prototype.getTime;
 
