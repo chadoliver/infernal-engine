@@ -234,7 +234,7 @@
 			if (this.state === states.ACTIVE) {
 				realOffset = Date.now() - this.synchron.real;
 			}
-			return this.synchron.simulation + realOffset;
+			return this.synchron.simulation;
 		};
 
 		return TimeController;

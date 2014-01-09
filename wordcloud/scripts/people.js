@@ -34,8 +34,9 @@
 			}
 			else if (this.marker === null) {
 				// the marker doesn't exist, so we create it
+
 				this.marker = new google.maps.Marker({
-				    position: new google.maps.LatLng(location.latitude, location.longitude),
+				    position: location.toGoogle(),
 				    map: this.map.map,	// this.map is an instance of Map(), while this.map.map is an instance of google.maps.Map().
 				    title: this.person.name
 				});
@@ -179,7 +180,7 @@
 
 		PersonSet.prototype.putPerson = function(id, name) {
 
-			var person = new Person(id, map, name);
+			var person = new Person(id, this.map, name);
 			this.people.push(person);
 		};
 

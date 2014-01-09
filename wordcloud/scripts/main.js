@@ -44,6 +44,6 @@ starter.wait(function () {
 
     //===========================================================================================================//
 
-    //window['map'] = map;
+    window['map'] = map;
     window['timeController'] = timeController; 
 });
