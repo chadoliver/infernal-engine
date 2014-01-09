@@ -1,7 +1,5 @@
 (function() {
 
-	// new Map('SATELLITE', 11, new Location(-43.38, 171.22));
-
 	var Map = (function() {
 		// a descriptive comment ...
 	
@@ -36,6 +34,22 @@
 		return Map;
 	})();
 
+
+	//===========================================================================================================//
+	
+	// The google closure compiler obfuscates the names of classes, properties, and methods. However, it doesn't alter
+	// string literals. We therefore use the following method to ensure that the necessary tokens are available to the
+	// outside world.
+
+	
+	window['Map'] = Map; // <-- Constructor
+	window['Map']['map'] = Map.map;
+	window['Map']['changeStyle'] = Map.changeStyle;
+	window['Map']['printPosition'] = Map.printPosition;
+
+
+	//===========================================================================================================//
+
 	/*
 	var markers = [
 	    new google.maps.Marker({
@@ -60,17 +74,5 @@
 	    })
 	];
 	*/
-
-	//===========================================================================================================//
-	
-	// The google closure compiler obfuscates the names of classes, properties, and methods. However, it doesn't alter
-	// string literals. We therefore use the following method to ensure that the necessary tokens are available to the
-	// outside world.
-
-	window['Map'] = Map; // <-- Constructor
-
-	window['Map']['map'] = Map.map;
-	window['Map']['changeStyle'] = Map.changeStyle;
-	window['Map']['printPosition'] = Map.printPosition;
 
 })();
