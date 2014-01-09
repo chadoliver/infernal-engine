@@ -91,11 +91,7 @@
 		Clock.prototype.start = function(sampleTimeSpeedup, simulationTimeOffset) {
 
 			this.pause(); // cancel any running timer.
-
-			this.sampleTimeSpeedup = sampleTimeSpeedup;
-			this.simulationTimeOffset = simulationTimeOffset;
-
-			this.updateScreen();
+			this.scrub(sampleTimeSpeedup, simulationTimeOffset);
 			this.intervalHandle = setInterval(this.updateScreen.bind(this), 50); // update the screen every tenth of a second.
 		};
 
@@ -105,6 +101,12 @@
 				clearInterval(this.intervalHandle);
 				this.intervalHandle = null;
 			}
+		};
+
+		Clock.prototype.scrub = function(sampleTimeSpeedup, simulationTimeOffset) {
+			this.sampleTimeSpeedup = sampleTimeSpeedup;
+			this.simulationTimeOffset = simulationTimeOffset;
+			this.updateScreen();
 		};
 
 		Clock.prototype.updateScreen = function() {
@@ -209,18 +211,14 @@
 
 		TimeController.prototype.scrub = function(simulationTime) {
 			// Change the current simulation time, without changing the real time. Equivalent to skipping forwards or 
-			// backwards in a movie. Note that scrub() won't have any *immediate* effect if this.state is PAUSED.
-
+			// backwards in a movie.
+			
+			var offset = Date.now() - simulationTime;
 			this.synchron.simulation = simulationTime;
 
-			if (this.state === states.ACTIVE) {
-				this.synchron.real = Date.now();
-
-				var offset = this.synchron.real - this.synchron.simulation;
-				for (var i = 0; i < this.listeners.length; i++) {
-					this.listeners[i].start(this.sampleTimeSpeedup, offset);
-				};
-			}
+			for (var i = 0; i < this.listeners.length; i++) {
+				this.listeners[i].scrub(this.sampleTimeSpeedup, offset);
+			};
 		};
 
 		TimeController.prototype.registerListener = function(listener) {

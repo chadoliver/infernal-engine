@@ -35,10 +35,8 @@
 			this.listeners = [];
 		}
 
-		SimulationInstant.prototype.start = function(sampleTimeSpeedup, simulationTimeOffset) {
+		SimulationInstant.prototype.getDelay = function(sampleTimeSpeedup, simulationTimeOffset) {
 			
-			this.pause();	// cancel any running timer.
-
 			// simulationTime is the time of a particular instant within the frame of reference of a simulation. It is 
 			// *not* the current time within the simulation.
 			var simulationTime = (this.sampleTime - this.zeroTime) / sampleTimeSpeedup;	
@@ -52,6 +50,14 @@
 			// happened in the 'past' (within simulation time, at least).
 			var delay = realTime - Date.now();
 
+			return delay;
+		};
+
+		SimulationInstant.prototype.start = function(sampleTimeSpeedup, simulationTimeOffset) {
+			
+			this.pause();	// cancel any running timer.
+
+			var delay = this.getDelay(sampleTimeSpeedup, simulationTimeOffset);
 			this.updateTemporalState(delay);
 
 			if (delay > 0) {	// it's no use setting a timeout if the event happens in the past.
@@ -64,6 +70,21 @@
 			if (this.timeoutHandle !== null) {
 				window.clearTimeout(this.timeoutHandle);
 				this.timeoutHandle = null;
+			}
+		};
+
+		SimulationInstant.prototype.scrub = function(sampleTimeSpeedup, simulationTimeOffset) {
+			
+			var wasActive = (this.timeoutHandle !== null);
+			if (wasActive) {
+				this.pause();	// cancel the running timer.
+			}
+			
+			var delay = this.getDelay(sampleTimeSpeedup, simulationTimeOffset);
+			this.updateTemporalState(delay);
+
+			if (wasActive && (delay > 0)) {	// it's no use setting a timeout if the event happens in the past.
+				this.timeoutHandle = window.setTimeout(this.onCountdownFires.bind(this), delay);
 			}
 		};
 
