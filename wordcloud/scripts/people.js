@@ -3,38 +3,46 @@
 
 	var Marker = (function() {
 		// a descriptive comment ...
-	
+
 		function Marker(person, map, initialLocation) {
 			// Marker represents a pointer thingy on the map. In our case, it is a visual representation of a person's
 			// location at a given time.
+
+			this.marker = null;		// an instance of google.maps.Marker();
 
 			this.person = person;
 			this.map = map;
 			this.location = null;
 
-			if (initialLocation !== undefined) {
-				this.create(initialLocation);
-			}
-			
-			this.marker = null;
+			this.showAt(initialLocation);
 		}
 
-		Marker.prototype.create = function(location) {
+		Marker.prototype.hide = function() {
+			// What we're really doing is deleting the marker (not just hiding it). This is perhaps overkill, but it makes 
+			// it a little easier to manage markers.
 
-			this.marker = new google.maps.Marker({
-			    position: new google.maps.LatLng(this.location.latitude, this.location.longitude),
-			    map: this.map,
-			    title: this.person.name
-			}),
+			if (this.marker !== null) {
+				this.marker.setMap(null);
+				this.marker = null;
+			}
 		};
 
-		Marker.prototype.setLocation = function(location) {
+		Marker.prototype.showAt = function(location) {
 			
-			if (this.marker === null) {	// if we've never been given a location before, this.marker won't have been initialised.
-				this.create(location);
+			if (location === undefined) {
+				this.hide();
+			}
+			else if (this.marker === null) {
+				// the marker doesn't exist, so we create it
+				this.marker = new google.maps.Marker({
+				    position: new google.maps.LatLng(location.latitude, location.longitude),
+				    map: this.map.map,	// this.map is an instance of Map(), while this.map.map is an instance of google.maps.Map().
+				    title: this.person.name
+				});
 			}
 			else {
-
+				// the marker exists, so we just need to change the location.
+				this.marker.setPosition(location.latitude, location.longitude);
 			}
 		};
 	
@@ -46,7 +54,7 @@
 
 
 	var Person = (function () {
-		// the Person class represents people, obviously. Specifically, a Person instance is a container for a set of 
+		// the Person class represents people, obviously. In practice, a Person instance is a container for a set of 
 		// actions.
 
 		function UUID () {
@@ -56,9 +64,9 @@
 			});
 		};
 
-		function Person (id) {
+		function Person (id, map, name) {
 			this.id = id || new UUID();
-			this.name = "";
+			this.name = name || "Joe Blogs";
 
 			this.marker = new Marker(this, map, undefined);		// the marker's location is undefined until .registerAction() is called.
 			this.actions = [];
@@ -77,7 +85,7 @@
 			});
 		};
 
-		Person.prototype.registerAction = function(actions) {
+		Person.prototype.registerAction = function(action) {
 			
 			this.actions.push(action);
 			action.registerListener(this);
@@ -85,19 +93,19 @@
 		};
 
 		Person.prototype.setLocationFromAction = function(action) {
-			
+
 			if (action !== undefined) {
-				this.marker.setLocation(action.location);
+				this.marker.showAt(action.location);
 				this.currentLocationSource = action;
 			} else {
-				this.marker.setLocation(undefined);
+				this.marker.hide();
 				this.currentLocationSource = null;
 			}
 		};
 
 		Person.prototype.progressLocation = function(action) {
 
-			if (action.sampleTime > this.currentLocationSource.sampleTime) {
+			if (this.currentLocationSource === null || action.sampleTime > this.currentLocationSource.sampleTime) {
 				if (action.location !== undefined) {
 					this.setLocationFromAction(action);
 				}
@@ -147,7 +155,7 @@
 			*/
 			
 			if (action.isActive) {
-				console.log(action.message.text);
+				console.log(action.message);
 				this.progressLocation(action);
 			} 
 			else { // if time is being rolled back
@@ -164,9 +172,16 @@
 
 	var PersonSet = (function() {
 
-		function PersonSet (timeController, actions) {
+		function PersonSet (map) {
 			this.people = [];
+			this.map = map;
 		}
+
+		PersonSet.prototype.putPerson = function(id, name) {
+
+			var person = new Person(id, map, name);
+			this.people.push(person);
+		};
 
 		PersonSet.prototype.getPersonById = function(id) {
 			
@@ -178,7 +193,7 @@
 			}
 
 			// If we get to this point, that means there is no Person instance with that id
-			var person = new Person(id);
+			var person = new Person(id, this.map);
 			this.people.push(person);
 			return person;
 		};
@@ -195,18 +210,12 @@
 
 	//===========================================================================================================//
 
-	function begin (actions) {
 
-		var personSet = new PersonSet();
+	window['PersonSet'] = PersonSet; // <-- Constructor
+	window['PersonSet'].prototype['putPerson'] = PersonSet.prototype.putPerson;
+	window['PersonSet'].prototype['registerAction'] = PersonSet.prototype.registerAction;
 
-		for (var i=0; i<actions.length; i++) {
-			personSet.registerAction(actions[i]);
-		}
-	}
-
-
-	window['WordCloud'] = WordCloud; // <-- Constructor
-	window['WordCloud'].prototype['paint'] = WordCloud.prototype.paint;
-	window['WordCloud'].prototype['putWord'] = WordCloud.prototype.putWord;
+	window['Person'] = Person; // <-- Constructor
+	window['Person'].prototype['updateOnAction'] = Person.prototype.updateOnAction;
 
 })();
