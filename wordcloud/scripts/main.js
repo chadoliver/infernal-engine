@@ -1,41 +1,8 @@
 starter.wait(function () {
 
-    var map = new google.maps.Map(document.getElementById('map'), {
-        center: new google.maps.LatLng(-43.38, 171.22),
-        zoom: 11,
-        //mapTypeId: google.maps.MapTypeId.ROADMAP,
-        //mapTypeId: google.maps.MapTypeId.HYBRID,
-        mapTypeId: google.maps.MapTypeId.SATELLITE,
-        disableDefaultUI: true,
-        rotateControl: true,
-    });
-
-    var markers = [
-        new google.maps.Marker({
-            position: new google.maps.LatLng(-43.38, 171.22),
-            map: map,
-            title: 'Tim'
-        }),
-        new google.maps.Marker({
-            position: new google.maps.LatLng(-43.43, 171.18),
-            map: map,
-            title: 'Jerry'
-        }),
-        new google.maps.Marker({
-            position: new google.maps.LatLng(-43.41, 171.33),
-            map: map,
-            title: 'Russel'
-        }),
-        new google.maps.Marker({
-            position: new google.maps.LatLng(-43.415, 171.34),
-            map: map,
-            title: 'Russel'
-        })
-    ];
+    var map = new Map('SATELLITE', 11, new Location(-43.38, 171.22));
 
     //===========================================================================================================//
-
-    var startTime = Date.now();
 
     var wordCloud = new WordCloud('wordcloud', constants.FONT_WEIGHT, constants.FONT_NAME);
 
@@ -54,14 +21,29 @@ starter.wait(function () {
 
     wordCloud.paint();
 
-    console.log('seconds:', (Date.now()-startTime)/1000);
-
     //===========================================================================================================//
 
     var sampleTimeSpeedup = 10;
-    var zeroTime = 60 * 60; // 1 hour
-
+    var zeroTime = 0; 
     var timeController = new TimeController(zeroTime, sampleTimeSpeedup);
 
+    var personSet = new PersonSet(map);
+    personSet.putPerson(1, 'Tim');
+    personSet.putPerson(2, 'Jerry');
+    personSet.putPerson(3, 'Russel');
+    personSet.putPerson(4, 'Norman');
+
+    var actionSet = new ActionSet(timeController, personSet);
+    actionSet.putAction('1 foo bar baz', new Location(-43.38, 171.22), 1, 12000);
+    actionSet.putAction('2 foo bar baz', new Location(-43.43, 171.18), 2, 24000);
+    actionSet.putAction('3 foo bar baz', new Location(-43.41, 171.33), 3, 36000);
+    actionSet.putAction('4 foo bar baz', new Location(-43.415, 171.34), 4, 48000);
+
+    timeController.begin();
+
+
+    //===========================================================================================================//
+
+    //window['map'] = map;
     window['timeController'] = timeController; 
 });
