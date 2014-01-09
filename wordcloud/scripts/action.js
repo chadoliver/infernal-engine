@@ -17,32 +17,6 @@
 	//===========================================================================================================//
 
 
-	var Location = (function () {
-
-		function Location (latitude, longitude) {
-			this.latitude = latitude;
-			this.longitude = longitude;
-		};
-
-		Location.prototype.difference = function(other) {
-			var latitude = this.latitude - other.latitude;
-	        var longitude = this.longitude - other.longitude;
-	        return new Location(latitude, longitude);
-		};
-
-		Location.prototype.distance = function(other) {
-			var dif = this.difference(other);
-	        var distance = Math.sqrt(dif.latitude*dif.latitude + dif.longitude*dif.longitude);
-	        return distance;
-		};
-
-		return Location;
-	})();
-
-
-	//===========================================================================================================//
-
-
 	var SimulationInstant = (function () { 
 		// This class is used to represent a instant in Simulation Time. 
 
@@ -58,7 +32,7 @@
 
 			this.timeoutHandle = null;
 			this.temporalState = states.FUTURE;
-			this.subscribers = [];
+			this.listeners = [];
 		}
 
 		SimulationInstant.prototype.start = function(sampleTimeSpeedup, simulationTimeOffset) {
@@ -162,7 +136,7 @@
 			
 			if ( ! this.isActive) {
 				this.isActive = true;
-				console.log('activate');
+				console.log('activated');
 				this.notifyListeners();
 			}
 		};
@@ -172,7 +146,7 @@
 			
 			if (this.isActive) {
 				this.isActive = false;
-				console.log('deactivate');
+				console.log('deactivated');
 				this.notifyListeners();
 			}
 		};
@@ -191,6 +165,26 @@
 		return Action;
 	})();
 
+
+	//===========================================================================================================//
+
+
+	var ActionSet = (function() {
+		// a descriptive comment ...
+	
+		function ActionSet(timeController, personSet) {
+			
+			this.timeController = timeController;
+			this.personSet = personSet;
+		}
+
+		ActionSet.prototype.putAction = function(message, location, personId, sampleTime) {
+			var action = new Action(message, location, personId, sampleTime, this.timeController);
+			this.personSet.registerAction(action);
+		};
+	
+		return ActionSet;
+	})();
 	
 	//===========================================================================================================//
 
@@ -212,14 +206,16 @@
 	// outside world.
 
 	window['Action'] = Action; // <-- Constructor
-	
+
 	window['Action']['isActive'] = Action.isActive;
 	window['Action']['personId'] = Action.personId;
 	window['Action']['sampleTime'] = Action.sampleTime;
 	window['Action']['message'] = Action.message;
-	window['Action']['message']['text'] = Action.message.text;
 
 	window['Action'].prototype['registerListener'] = Action.prototype.registerListener;
 	window['Action'].prototype['updateOnAction'] = Action.prototype.updateOnAction;
+
+	window['ActionSet'] = ActionSet; // <-- Constructor
+	window['ActionSet']['putAction'] = ActionSet.putAction;
 
 })();
