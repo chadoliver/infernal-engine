@@ -154,7 +154,11 @@
 				real: Date.now(),
 				simulation: 0
 			};
+		}
 
+		TimeController.prototype.begin = function() {
+			// This function should be called once the system has been assembled. It hooks up the UI and starts time ticking.
+			
 			var playPauseButton = new PlayPauseButton();
 			var clock = new Clock(this, this.zeroTime);
 
@@ -162,7 +166,7 @@
 			playPauseButton.registerListener(this);
 
 			playPauseButton.play();
-		}
+		};
 
 		TimeController.prototype.toggle = function() {
 			// start if it's currently paused; pause if it's currently playing.
