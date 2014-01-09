@@ -65,6 +65,96 @@
 	//===========================================================================================================//
 
 
+	var ProgressBar = (function() {
+		// a descriptive comment ...
+	
+		function ProgressBar(id, zeroTime) {
+
+			this.zeroTime = zeroTime * 1000 || 0;
+			this.sampleTimeSpeedup = null;
+			this.simulationTimeOffset = null;
+
+			this.intervalHandles = {
+				tick: null,			// this is always null iff simulation time is paused.
+				updateScrub: null	// this is always null iff the user isn't scrubbing (has mouse down with focus on indicator div).
+			};
+			
+			this.element = document.getElementById(id);
+			this.createHTMLComponents();
+
+			this.isMouseDown = false;
+		}
+
+		ProgressBar.prototype.createHTMLComponents = function() {
+			// body...
+		};
+
+		ProgressBar.prototype.onMouseDown = function() {
+			// enter 'scrubbing' mode
+
+			this.isMouseDown = true;
+		};
+
+		ProgressBar.prototype.onMouseUp = function() {
+			// exit scrubbing mode
+
+			this.isMouseDown = true;
+		}
+
+		ProgressBar.prototype.onScrub = function() {
+			// body...
+
+			if (this.isMouseDown) {
+				// calculate horizontal mouse position and therefore new scrub position.
+				// notify listener(s)
+			}
+		};
+
+		ProgressBar.prototype.start = function(sampleTimeSpeedup, simulationTimeOffset) {
+
+			this.pause(); // cancel this.intervalHandles.tick
+
+			this.sampleTimeSpeedup = sampleTimeSpeedup;
+			this.simulationTimeOffset = simulationTimeOffset;
+
+			this.updateScreen();
+			this.intervalHandle = setInterval(this.updateScreen.bind(this), 50); // update the screen every 20th of a second.
+		};
+
+		ProgressBar.prototype.pause = function() {
+
+			if (this.intervalHandles.tick !== null) {
+				clearInterval(this.intervalHandle);
+				this.intervalHandle = null;
+			}
+		};
+
+		ProgressBar.prototype.updateScreen = function() {
+
+			var simulationTime = Date.now() - this.simulationTimeOffset
+			var rawSampleTime = simulationTime * this.sampleTimeSpeedup + this.zeroTime; // in milliseconds
+			var trimmed = Math.floor(rawSampleTime / 1000);
+
+			var seconds = Math.floor(trimmed % 60);
+			trimmed = trimmed / 60;
+
+			var minutes = Math.floor(trimmed % 60);
+			trimmed = trimmed / 60;
+
+			var hours = Math.floor(trimmed % 24);
+
+			this.elements.hours.innerHTML = padNumber(hours);
+			this.elements.minutes.innerHTML = padNumber(minutes);
+			this.elements.seconds.innerHTML = padNumber(seconds);
+		};
+	
+		return ProgressBar;
+	})();
+
+
+	//===========================================================================================================//
+
+
 	var Clock = (function() {
 		// Clock is the class which encapsulates the digital clock in the bottom right of the web page. This 
 		// class is just a View component; it doesn't do anything except update the time on the screen.
@@ -92,7 +182,7 @@
 
 			this.pause(); // cancel any running timer.
 			this.scrub(sampleTimeSpeedup, simulationTimeOffset);
-			this.intervalHandle = setInterval(this.updateScreen.bind(this), 50); // update the screen every tenth of a second.
+			this.intervalHandle = setInterval(this.updateScreen.bind(this), 50); // update the screen every 20th of a second.
 		};
 
 		Clock.prototype.pause = function() {
