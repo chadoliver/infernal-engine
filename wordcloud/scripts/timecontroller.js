@@ -68,45 +68,75 @@
 	var ProgressBar = (function() {
 		// a descriptive comment ...
 	
-		function ProgressBar(id, zeroTime) {
+		function ProgressBar(id, zeroTime, endTime) {
 
-			this.zeroTime = zeroTime * 1000 || 0;
+			this.zeroTime = zeroTime || 0;
+			this.endTime  = endTime  || 0;
+
 			this.sampleTimeSpeedup = null;
 			this.simulationTimeOffset = null;
 
 			this.intervalHandles = {
 				tick: null,			// this is always null iff simulation time is paused.
-				updateScrub: null	// this is always null iff the user isn't scrubbing (has mouse down with focus on indicator div).
+				scrub: null			// this is always null iff the user isn't scrubbing (has mouse down with focus on indicator div).
 			};
 			
-			this.element = document.getElementById(id);
-			this.createHTMLComponents();
+			this.elements = this.createHTMLElements(id);
+			this.tickInterval = this.determineTickInterval();
 
-			this.isMouseDown = false;
+			this.listeners = [];
 		}
 
 		ProgressBar.prototype.createHTMLComponents = function() {
 			// body...
 		};
 
+		ProgressBar.prototype.determineTickInterval = function() {
+			// We want to update with an interval which is the greater of:
+			// 	1) The time it takes for the indicator to move one pixel, or
+			//  2) 50 ms, being approximately the smallest interval visible to humans.
+
+			// assumption: zeroTime and endTime are in milliseconds.
+			
+			var pixels = this.elements.rail.width;
+			var pixelMovementInterval = (this.endTime - this.zeroTime) / pixels;
+
+			var tickInterval = Math.max(50, pixelMovementInterval);
+
+			return tickInterval;
+		};
+
 		ProgressBar.prototype.onMouseDown = function() {
 			// enter 'scrubbing' mode
 
-			this.isMouseDown = true;
+			if (this.intervalHandles.scrub === null) {
+				this.intervalHandles.scrub = setInterval(this.onScrub.bind(this), 50);
+			}
 		};
 
 		ProgressBar.prototype.onMouseUp = function() {
 			// exit scrubbing mode
 
-			this.isMouseDown = true;
+			if (this.intervalHandles.scrub !== null) {
+				clearInterval(this.intervalHandles.scrub);
+				this.intervalHandles.scrub = null;
+			}
 		}
 
 		ProgressBar.prototype.onScrub = function() {
-			// body...
 
-			if (this.isMouseDown) {
+			if (this.intervalHandles.scrub !== null) {
+
 				// calculate horizontal mouse position and therefore new scrub position.
+				var simulationTime = ?;
+
+				// check against previous position. We don't want to update the dom if nothing changed.
+
+				
 				// notify listener(s)
+				for (var i = 0; i < this.listeners.length; i++) {
+					this.listeners[i].scrub(simulationTime);
+				};
 			}
 		};
 
@@ -117,8 +147,8 @@
 			this.sampleTimeSpeedup = sampleTimeSpeedup;
 			this.simulationTimeOffset = simulationTimeOffset;
 
-			this.updateScreen();
-			this.intervalHandle = setInterval(this.updateScreen.bind(this), 50); // update the screen every 20th of a second.
+			this.onTick();
+			this.intervalHandle = setInterval(this.onTick.bind(this), this.tickInterval); // update the screen every 20th of a second.
 		};
 
 		ProgressBar.prototype.pause = function() {
@@ -129,23 +159,16 @@
 			}
 		};
 
-		ProgressBar.prototype.updateScreen = function() {
+		ProgressBar.prototype.onTick = function() {
 
 			var simulationTime = Date.now() - this.simulationTimeOffset
 			var rawSampleTime = simulationTime * this.sampleTimeSpeedup + this.zeroTime; // in milliseconds
 			var trimmed = Math.floor(rawSampleTime / 1000);
+		};
 
-			var seconds = Math.floor(trimmed % 60);
-			trimmed = trimmed / 60;
-
-			var minutes = Math.floor(trimmed % 60);
-			trimmed = trimmed / 60;
-
-			var hours = Math.floor(trimmed % 24);
-
-			this.elements.hours.innerHTML = padNumber(hours);
-			this.elements.minutes.innerHTML = padNumber(minutes);
-			this.elements.seconds.innerHTML = padNumber(seconds);
+		ProgressBar.prototype.registerListener = function(listener) {
+			console.log('listening to ProgressBar');
+			this.listeners.push(listener);
 		};
 	
 		return ProgressBar;
@@ -302,7 +325,7 @@
 		TimeController.prototype.scrub = function(simulationTime) {
 			// Change the current simulation time, without changing the real time. Equivalent to skipping forwards or 
 			// backwards in a movie.
-			
+
 			var offset = Date.now() - simulationTime;
 			this.synchron.simulation = simulationTime;
 
