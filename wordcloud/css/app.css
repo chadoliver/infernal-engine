@@ -108,6 +108,7 @@ body {
     width: 10px;
     height: 25px;
     padding: 2px 0px 3px 0px;
+    margin-left: 0px;   /* this should be dynamically altered to move the indicator left and right */
     cursor: pointer;
 }
 

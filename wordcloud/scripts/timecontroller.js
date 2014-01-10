@@ -76,29 +76,27 @@
 			this.sampleTimeSpeedup = null;
 			this.simulationTimeOffset = null;
 
-			this.intervalHandles = {
-				tick: null,			// this is always null iff simulation time is paused.
-				scrub: null			// this is always null iff the user isn't scrubbing (has mouse down with focus on indicator div).
-			};
+			this.intervalHandle =  null;			// this is always null iff simulation time is paused.
 			
-			this.elements = this.createHTMLElements(id);
-			this.tickInterval = this.determineTickInterval();
+			this.elements = {
+				rail: document.getElementById('indicator'),
+				indicator: document.getElementById('rail'),
+			};
 
+			this.timeOfLastScrub = Date.now();
+			this.previousMousePosition = 0;				// this is the mouse's horizontal position at timeOfLastScrub.
+			this.tickInterval = this.determineTickInterval();
 			this.listeners = [];
 		}
-
-		ProgressBar.prototype.createHTMLComponents = function() {
-			// body...
-		};
 
 		ProgressBar.prototype.determineTickInterval = function() {
 			// We want to update with an interval which is the greater of:
 			// 	1) The time it takes for the indicator to move one pixel, or
-			//  2) 50 ms, being approximately the smallest interval visible to humans.
+			//  2) 50 ms, being approximately the smallest interval noticable to humans.
 
 			// assumption: zeroTime and endTime are in milliseconds.
 			
-			var pixels = this.elements.rail.width;
+			var pixels = this.elements.rail.clientWidth;
 			var pixelMovementInterval = (this.endTime - this.zeroTime) / pixels;
 
 			var tickInterval = Math.max(50, pixelMovementInterval);
@@ -106,36 +104,59 @@
 			return tickInterval;
 		};
 
-		ProgressBar.prototype.onMouseDown = function() {
+		ProgressBar.prototype.moveIndicatorTo = function(ms) {
+
+			var pixelsPerMillisecond = this.elements.rail.clientWidth / (this.endTime - this.zeroTime);
+			this.elements.indicator.style.marginLeft = ms*pixelsPerMillisecond;
+		};
+
+		ProgressBar.prototype.onMouseDown = function(event) {
 			// enter 'scrubbing' mode
 
-			if (this.intervalHandles.scrub === null) {
-				this.intervalHandles.scrub = setInterval(this.onScrub.bind(this), 50);
-			}
+			this.timeOfLastScrub = Date.now();
+			this.previousMousePosition = event.x;
+
+			this.elements.indicator.addEventListener('mousemove', this.onMouseMove.bind(this), false);
+
+			// notify listener(s) that we've begun scrubbing.
+			for (var i = 0; i < this.listeners.length; i++) {
+				this.listeners[i].beginScrubbing();
+			};
 		};
 
 		ProgressBar.prototype.onMouseUp = function() {
 			// exit scrubbing mode
 
-			if (this.intervalHandles.scrub !== null) {
-				clearInterval(this.intervalHandles.scrub);
-				this.intervalHandles.scrub = null;
-			}
+			this.elements.indicator.removeEventListener('mousemove', this.onMouseMove.bind(this));
+
+			endScrubbing() event
+
+			// notify listener(s) that we've finished scrubbing.
+			for (var i = 0; i < this.listeners.length; i++) {
+				this.listeners[i].endScrubbing();
+			};
 		}
 
-		ProgressBar.prototype.onScrub = function() {
+		ProgressBar.prototype.onMouseMove = function(event) {
 
-			if (this.intervalHandles.scrub !== null) {
+			var now = Date.now();
+			var timeDelta = now - this.timeOfLastScrub;
+			var positionDelta = event.x - this.previousMousePosition;
 
-				// calculate horizontal mouse position and therefore new scrub position.
-				var simulationTime = ?;
+			if ((timeDelta > 50) || (positionDelta > 5)) {
 
-				// check against previous position. We don't want to update the dom if nothing changed.
+				var pixelRatio = positionDelta / this.elements.rail.clientWidth;
+				var newSampleTime = this.currentTime + pixelRatio*(this.endTime - this.zeroTime);
 
+				this.timeOfLastScrub = now;
+				this.previousMousePosition = event.x;
+				this.currentTime = newTime;
+
+				this.moveIndicatorTo(newSampleTime);
 				
 				// notify listener(s)
 				for (var i = 0; i < this.listeners.length; i++) {
-					this.listeners[i].scrub(simulationTime);
+					this.listeners[i].scrub(newSampleTime);
 				};
 			}
 		};
@@ -162,8 +183,9 @@
 		ProgressBar.prototype.onTick = function() {
 
 			var simulationTime = Date.now() - this.simulationTimeOffset
-			var rawSampleTime = simulationTime * this.sampleTimeSpeedup + this.zeroTime; // in milliseconds
-			var trimmed = Math.floor(rawSampleTime / 1000);
+			var sampleTime = simulationTime * this.sampleTimeSpeedup + this.zeroTime; // in milliseconds
+			
+			this.moveIndicatorTo(sampleTime);
 		};
 
 		ProgressBar.prototype.registerListener = function(listener) {
