@@ -98,36 +98,35 @@ body {
     padding: 0;
     margin-left: 50px;
     margin-right: 150px;
-    height: 100%;
+    height: 30px;
+    background-color: rgba(255, 255, 255, 0.0);
+    border-width: 0px;
 }
 
-#scrubber input {
-    width: 100%;
-    margin-top: 13px;
-    /*padding-top: 20px;*/
-}
-
-input[type="range"]{
-    -webkit-appearance: none;
-    -moz-apperance: none;
-    width:100%; 
-    height:4px;
+#scrubber #indicator {
+    position: absolute;
+    width: 10px;
+    height: 25px;
+    padding: 2px 0px 3px 0px;
     cursor: pointer;
 }
 
-input::-webkit-slider-thumb{
-    -webkit-appearance:none; 
-    -moz-apperance:none; 
-    width:10px; 
-    height:20px;
-    webkit-border-radius:10px; 
-    -moz-border-radius:10px; 
-    -ms-border-radius:10px; 
-    -o-border-radius:10px; 
-    border-radius:10px;
-    background-color: white
+#scrubber #indicator div {
+    width: 10px;
+    height: 25px;
+    background-color: white;
+    border-radius: 2.5px;
 }
 
-input[type="range"]:focus {
-    outline:none;
+#scrubber #rail {
+    position: absolute;
+    width: 100%;
+    padding-top: 14px;
+}
+
+#scrubber #rail div {
+    width: 100%;
+    height: 2px;
+    background-color: white;
+    border-radius: 2.5px;
 }
