@@ -129,12 +129,10 @@
 
 			this.elements.indicator.removeEventListener('mousemove', this.onMouseMove.bind(this));
 
-			endScrubbing() event
-
 			// notify listener(s) that we've finished scrubbing.
 			for (var i = 0; i < this.listeners.length; i++) {
 				this.listeners[i].endScrubbing();
-			};
+			}
 		}
 
 		ProgressBar.prototype.onMouseMove = function(event) {
