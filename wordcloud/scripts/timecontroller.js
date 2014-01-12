@@ -67,23 +67,42 @@
 
 	var ProgressBar = (function() {
 		// a descriptive comment ...
+
+		function pauseEvent(e){
+		    if(e.stopPropagation) e.stopPropagation();
+		    if(e.preventDefault) e.preventDefault();
+		    e.cancelBubble=true;
+		    e.returnValue=false;
+		    return false;
+		}
 	
-		function ProgressBar(id, zeroTime, endTime) {
+		function ProgressBar(zeroTime, endTime) {
+
+			var self = this;
 
 			this.zeroTime = zeroTime || 0;
 			this.endTime  = endTime  || 0;
+			this.currentTime = this.zeroTime;
 
 			this.sampleTimeSpeedup = null;
 			this.simulationTimeOffset = null;
 
 			this.intervalHandle =  null;			// this is always null iff simulation time is paused.
-			
+
 			this.elements = {
-				rail: document.getElementById('indicator'),
-				indicator: document.getElementById('rail'),
+				rail: document.getElementById('rail'),
+				indicator: document.getElementById('indicator'),
+				handle: document.getElementById('handle'),
 			};
 
-			this.timeOfLastScrub = Date.now();
+			this.eventHandlers = {
+				onMouseDown: self.onMouseDown.bind(self),
+				onMouseUp: self.onMouseUp.bind(self),
+				onMouseMove: self.onMouseMove.bind(self)
+			};
+
+			this.elements.handle.addEventListener("mousedown", this.eventHandlers.onMouseDown, true);
+
 			this.previousMousePosition = 0;				// this is the mouse's horizontal position at timeOfLastScrub.
 			this.tickInterval = this.determineTickInterval();
 			this.listeners = [];
@@ -91,7 +110,7 @@
 
 		ProgressBar.prototype.determineTickInterval = function() {
 			// We want to update with an interval which is the greater of:
-			// 	1) The time it takes for the indicator to move one pixel, or
+			// 	1) The time it takes for the indicator to move half a pixel, or
 			//  2) 50 ms, being approximately the smallest interval noticable to humans.
 
 			// assumption: zeroTime and endTime are in milliseconds.
@@ -104,64 +123,70 @@
 			return tickInterval;
 		};
 
-		ProgressBar.prototype.moveIndicatorTo = function(ms) {
+		ProgressBar.prototype.moveIndicatorTo = function(ms, railWidth) {
 
-			var pixelsPerMillisecond = this.elements.rail.clientWidth / (this.endTime - this.zeroTime);
-			this.elements.indicator.style.marginLeft = ms*pixelsPerMillisecond;
+			railWidth = railWidth || this.elements.rail.clientWidth;
+
+			var pixelsPerMillisecond =  railWidth / (this.endTime - this.zeroTime);
+			var newPosition = ms*pixelsPerMillisecond;
+			var boundedPosition = Math.max(0, Math.min(railWidth, newPosition));
+			this.elements.indicator.style.marginLeft = boundedPosition;
+
+			//console.log('moving indicator:', ms, pixelsPerMillisecond);
 		};
 
 		ProgressBar.prototype.onMouseDown = function(event) {
 			// enter 'scrubbing' mode
 
-			this.timeOfLastScrub = Date.now();
-			this.previousMousePosition = event.x;
+			pauseEvent(event || window.event);
+			console.log('mouse down');
 
-			this.elements.indicator.addEventListener('mousemove', this.onMouseMove.bind(this), false);
+			this.previousMousePosition = event.x;
+			document.addEventListener('mousemove', this.eventHandlers.onMouseMove, false);
+			document.addEventListener("mouseup", this.eventHandlers.onMouseUp, true);
 
 			// notify listener(s) that we've begun scrubbing.
 			for (var i = 0; i < this.listeners.length; i++) {
-				this.listeners[i].beginScrubbing();
+				//this.listeners[i].beginScrubbing();
 			};
 		};
 
 		ProgressBar.prototype.onMouseUp = function() {
 			// exit scrubbing mode
 
-			this.elements.indicator.removeEventListener('mousemove', this.onMouseMove.bind(this));
+			console.log('mouse up');
+
+			document.removeEventListener('mousemove', this.eventHandlers.onMouseMove, false);
+			document.removeEventListener('mouseup', this.eventHandlers.onMouseUp, true);
 
 			// notify listener(s) that we've finished scrubbing.
 			for (var i = 0; i < this.listeners.length; i++) {
-				this.listeners[i].endScrubbing();
+				//this.listeners[i].endScrubbing();
 			}
 		}
 
 		ProgressBar.prototype.onMouseMove = function(event) {
 
-			var now = Date.now();
-			var timeDelta = now - this.timeOfLastScrub;
-			var positionDelta = event.x - this.previousMousePosition;
+			pauseEvent(event || window.event);
 
-			if ((timeDelta > 50) || (positionDelta > 5)) {
+			var railWidth = this.elements.rail.clientWidth;
+			var pixelRatio = (event.x - this.previousMousePosition) / railWidth;
+			var newSampleTime = this.currentTime + pixelRatio*(this.endTime - this.zeroTime);
 
-				var pixelRatio = positionDelta / this.elements.rail.clientWidth;
-				var newSampleTime = this.currentTime + pixelRatio*(this.endTime - this.zeroTime);
+			this.previousMousePosition = event.x;
+			this.currentTime = newSampleTime;
 
-				this.timeOfLastScrub = now;
-				this.previousMousePosition = event.x;
-				this.currentTime = newTime;
-
-				this.moveIndicatorTo(newSampleTime);
-				
-				// notify listener(s)
-				for (var i = 0; i < this.listeners.length; i++) {
-					this.listeners[i].scrub(newSampleTime);
-				};
-			}
+			this.moveIndicatorTo(newSampleTime, railWidth);
+			
+			// notify listener(s)
+			for (var i = 0; i < this.listeners.length; i++) {
+				//this.listeners[i].scrub(newSampleTime);
+			};
 		};
 
 		ProgressBar.prototype.start = function(sampleTimeSpeedup, simulationTimeOffset) {
 
-			this.pause(); // cancel this.intervalHandles.tick
+			this.pause(); // cancel this.intervalHandle
 
 			this.sampleTimeSpeedup = sampleTimeSpeedup;
 			this.simulationTimeOffset = simulationTimeOffset;
@@ -172,7 +197,7 @@
 
 		ProgressBar.prototype.pause = function() {
 
-			if (this.intervalHandles.tick !== null) {
+			if (this.intervalHandle !== null) {
 				clearInterval(this.intervalHandle);
 				this.intervalHandle = null;
 			}
@@ -181,7 +206,7 @@
 		ProgressBar.prototype.onTick = function() {
 
 			var simulationTime = Date.now() - this.simulationTimeOffset
-			var sampleTime = simulationTime * this.sampleTimeSpeedup + this.zeroTime; // in milliseconds
+			var sampleTime = simulationTime/this.sampleTimeSpeedup + this.zeroTime; // in milliseconds
 			
 			this.moveIndicatorTo(sampleTime);
 		};
@@ -293,12 +318,15 @@
 
 		TimeController.prototype.begin = function() {
 			// This function should be called once the system has been assembled. It hooks up the UI and starts time ticking.
+
+			var progressBar = new ProgressBar(this.zeroTime, this.zeroTime + 10000); 
 			
 			var playPauseButton = new PlayPauseButton();
 			var clock = new Clock(this, this.zeroTime);
 
 			this.registerListener(clock);
 			playPauseButton.registerListener(this);
+			this.registerListener(progressBar);
 
 			playPauseButton.play();
 		};
