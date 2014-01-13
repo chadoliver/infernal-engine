@@ -80,9 +80,9 @@
 
 			var self = this;
 
-			this.zeroTime = zeroTime || 0;
-			this.endTime  = endTime  || 0;
-			this.currentTime = this.zeroTime;
+			this.zeroTime = zeroTime || 0;			// units: milliseconds of sample time
+			this.endTime  = endTime  || 0;			// units: milliseconds of sample time
+			this.currentSampleTime = this.zeroTime;		// units: milliseconds of sample time
 
 			this.sampleTimeSpeedup = null;
 			this.simulationTimeOffset = null;
@@ -98,12 +98,13 @@
 			this.eventHandlers = {
 				onMouseDown: self.onMouseDown.bind(self),
 				onMouseUp: self.onMouseUp.bind(self),
-				onMouseMove: self.onMouseMove.bind(self)
+				onMouseMove: self.onMouseMove.bind(self),
+				onTick: self.onTick.bind(self)
 			};
 
 			this.elements.handle.addEventListener("mousedown", this.eventHandlers.onMouseDown, true);
 
-			this.previousMousePosition = 0;				// this is the mouse's horizontal position at timeOfLastScrub.
+			this.previousMousePosition = null;				// this is the mouse's horizontal position at timeOfLastScrub.
 			this.tickInterval = this.determineTickInterval();
 			this.listeners = [];
 		}
@@ -120,19 +121,19 @@
 
 			var tickInterval = Math.max(50, pixelMovementInterval);
 
+			console.log('tick interval:', tickInterval);
+
 			return tickInterval;
 		};
 
-		ProgressBar.prototype.moveIndicatorTo = function(ms, railWidth) {
+		ProgressBar.prototype.moveIndicatorTo = function(sampleTime, railWidth) {
 
 			railWidth = railWidth || this.elements.rail.clientWidth;
 
 			var pixelsPerMillisecond =  railWidth / (this.endTime - this.zeroTime);
-			var newPosition = ms*pixelsPerMillisecond;
+			var newPosition = sampleTime*pixelsPerMillisecond;
 			var boundedPosition = Math.max(0, Math.min(railWidth, newPosition));
 			this.elements.indicator.style.marginLeft = boundedPosition;
-
-			//console.log('moving indicator:', ms, pixelsPerMillisecond);
 		};
 
 		ProgressBar.prototype.onMouseDown = function(event) {
@@ -143,11 +144,11 @@
 
 			this.previousMousePosition = event.x;
 			document.addEventListener('mousemove', this.eventHandlers.onMouseMove, false);
-			document.addEventListener("mouseup", this.eventHandlers.onMouseUp, true);
+			document.addEventListener('mouseup', this.eventHandlers.onMouseUp, true);
 
 			// notify listener(s) that we've begun scrubbing.
 			for (var i = 0; i < this.listeners.length; i++) {
-				//this.listeners[i].beginScrubbing();
+				this.listeners[i].enterScrubbingMode();
 			};
 		};
 
@@ -161,7 +162,7 @@
 
 			// notify listener(s) that we've finished scrubbing.
 			for (var i = 0; i < this.listeners.length; i++) {
-				//this.listeners[i].endScrubbing();
+				this.listeners[i].exitScrubbingMode();
 			}
 		}
 
@@ -171,16 +172,16 @@
 
 			var railWidth = this.elements.rail.clientWidth;
 			var pixelRatio = (event.x - this.previousMousePosition) / railWidth;
-			var newSampleTime = this.currentTime + pixelRatio*(this.endTime - this.zeroTime);
+			var newSampleTime = this.currentSampleTime + pixelRatio*(this.endTime - this.zeroTime);
 
 			this.previousMousePosition = event.x;
-			this.currentTime = newSampleTime;
+			this.currentSampleTime = newSampleTime;
 
 			this.moveIndicatorTo(newSampleTime, railWidth);
 			
 			// notify listener(s)
 			for (var i = 0; i < this.listeners.length; i++) {
-				//this.listeners[i].scrub(newSampleTime);
+				this.listeners[i].scrub(newSampleTime);
 			};
 		};
 
@@ -192,7 +193,7 @@
 			this.simulationTimeOffset = simulationTimeOffset;
 
 			this.onTick();
-			this.intervalHandle = setInterval(this.onTick.bind(this), this.tickInterval); // update the screen every 20th of a second.
+			this.intervalHandle = setInterval(this.eventHandlers.onTick, this.tickInterval); 	// update the screen every 20th of a second.
 		};
 
 		ProgressBar.prototype.pause = function() {
@@ -205,8 +206,8 @@
 
 		ProgressBar.prototype.onTick = function() {
 
-			var simulationTime = Date.now() - this.simulationTimeOffset
-			var sampleTime = simulationTime/this.sampleTimeSpeedup + this.zeroTime; // in milliseconds
+			var simulationTime = Date.now() - this.simulationTimeOffset;						// units: milliseconds of simulation time
+			var sampleTime = simulationTime / this.sampleTimeSpeedup + this.zeroTime;			// units: milliseconds of sample time
 			
 			this.moveIndicatorTo(sampleTime);
 		};
@@ -233,16 +234,18 @@
 
 		function Clock(zeroTime) {
 
-			this.zeroTime = zeroTime * 1000 || 0;
+			// The clock displays the current Sample time. The Simulation time is trivially given by Date.now() - simulationTimeOffset,
+			// so the complexity comes from calculating sample time from simulation time.
+
+			this.zeroTime = zeroTime || 0;						// units: milliseconds of sample time
 			this.sampleTimeSpeedup = null;
-			this.simulationTimeOffset = null;
+			this.simulationTimeOffset = null;					// units: milliseconds of real time
 			this.intervalHandle = null;
 
 			this.elements = {
 				hours: document.getElementById('hours'),
 				minutes: document.getElementById('minutes'),
-				seconds: document.getElementById('seconds'),
-				slider: document.getElementById('scrubber').getElementsByTagName('input')[0]
+				seconds: document.getElementById('seconds')
 			};
 		}
 
@@ -262,15 +265,15 @@
 		};
 
 		Clock.prototype.scrub = function(sampleTimeSpeedup, simulationTimeOffset) {
-			this.sampleTimeSpeedup = sampleTimeSpeedup;
-			this.simulationTimeOffset = simulationTimeOffset;
+			this.sampleTimeSpeedup = sampleTimeSpeedup;	
+			this.simulationTimeOffset = simulationTimeOffset;	// units: milliseconds of real time
 			this.updateScreen();
 		};
 
 		Clock.prototype.updateScreen = function() {
 
-			var simulationTime = Date.now() - this.simulationTimeOffset
-			var rawSampleTime = simulationTime * this.sampleTimeSpeedup + this.zeroTime; // in milliseconds
+			var simulationTime = Date.now() - this.simulationTimeOffset;					// units: milliseconds of simulation time, obviously
+			var rawSampleTime = simulationTime * this.sampleTimeSpeedup + this.zeroTime; 	// units: milliseconds of sample time
 			var trimmed = Math.floor(rawSampleTime / 1000);
 
 			var seconds = Math.floor(trimmed % 60);
@@ -304,54 +307,67 @@
 
 		function TimeController(zeroTime, sampleTimeSpeedup) {
 
-			this.zeroTime = zeroTime || 0;
+			this.zeroTime = zeroTime || 0;	// units: milliseconds of sample time
 			this.sampleTimeSpeedup = sampleTimeSpeedup || 1;
 
 			this.listeners = [];
 			this.state = states.PAUSED;
 
 			this.synchron = { // Synchron stores the Simulation Time and Real Time representations of a single instant.
-				real: Date.now(),
-				simulation: 0
+				real: Date.now(),			// units: milliseconds of wall time
+				simulation: 0				// units: milliseconds of simulation time
 			};
 		}
 
 		TimeController.prototype.begin = function() {
 			// This function should be called once the system has been assembled. It hooks up the UI and starts time ticking.
 
-			var progressBar = new ProgressBar(this.zeroTime, this.zeroTime + 10000); 
+			var progressBar = new ProgressBar(this.zeroTime, this.zeroTime + 10000);
 			
 			var playPauseButton = new PlayPauseButton();
-			var clock = new Clock(this, this.zeroTime);
+			var clock = new Clock(this.zeroTime);
 
 			this.registerListener(clock);
 			playPauseButton.registerListener(this);
+			progressBar.registerListener(this);
 			this.registerListener(progressBar);
 
 			playPauseButton.play();
 		};
 
-		TimeController.prototype.toggle = function() {
-			// start if it's currently paused; pause if it's currently playing.
+		TimeController.prototype.__start = function() {
+			// Allow simulation time to begin or resume.
 
-			if (this.state === states.PAUSED) {
-				this.start();
-			} else if (this.state === states.ACTIVE) {
-				this.pause();
-			}
+			this.synchron.real = Date.now(); // When the clock is paused, simulation time doesn't change but real time does.
+
+			var offset = this.synchron.real - this.synchron.simulation;	// units: milliseconds of real time
+			for (var i = 0; i < this.listeners.length; i++) {
+				if (this.listeners[i].start !== undefined) {
+					this.listeners[i].start(this.sampleTimeSpeedup, offset);
+				}
+			};
+		};
+
+		TimeController.prototype.__pause = function() {
+			// Pause simulation time.
+
+			var now = Date.now();										// units: milliseconds of real time
+			this.synchron.simulation += now - this.synchron.real;		// units: milliseconds of simulation time
+			this.synchron.real = now;									// units: milliseconds of real time
+			
+			for (var i = 0; i < this.listeners.length; i++) {
+				if (this.listeners[i].pause !== undefined) {
+					this.listeners[i].pause();
+				}
+			};
 		};
 
 		TimeController.prototype.start = function() {
 			// Allow simulation time to begin or resume.
 
 			if (this.state !== states.ACTIVE) {
-				this.synchron.real = Date.now(); // When the clock is paused, simulation time doesn't change but real time does.
+				this.__start();
 				this.state = states.ACTIVE;
-
-				var offset = this.synchron.real - this.synchron.simulation;
-				for (var i = 0; i < this.listeners.length; i++) {
-					this.listeners[i].start(this.sampleTimeSpeedup, offset);
-				};
 			}
 		};
 
@@ -359,27 +375,37 @@
 			// Pause simulation time.
 
 			if (this.state !== states.PAUSED) {
-				var now = Date.now();
-				this.synchron.simulation += now - this.synchron.real;
-				this.synchron.real = now;
+				this.__pause();
 				this.state = states.PAUSED;
-
-				for (var i = 0; i < this.listeners.length; i++) {
-					this.listeners[i].pause();
-				};
 			}
+		};
+
+		TimeController.prototype.enterScrubbingMode = function() {
+			// when we're scrubbing, time should pause if it is not already paused. 
+
+			this.__pause();	// this pauses time without altering the associated metadata. For example, this.state is unchanged.
 		};
 
 		TimeController.prototype.scrub = function(simulationTime) {
 			// Change the current simulation time, without changing the real time. Equivalent to skipping forwards or 
 			// backwards in a movie.
 
-			var offset = Date.now() - simulationTime;
-			this.synchron.simulation = simulationTime;
+			var offset = Date.now() - simulationTime;						// units: milliseconds of real time
+			this.synchron.simulation = simulationTime;						// units: milliseconds of simulation time
 
 			for (var i = 0; i < this.listeners.length; i++) {
-				this.listeners[i].scrub(this.sampleTimeSpeedup, offset);
+				if (this.listeners[i].scrub !== undefined) {
+					this.listeners[i].scrub(this.sampleTimeSpeedup, offset);
+				}
 			};
+		};
+
+		TimeController.prototype.exitScrubbingMode = function() {
+			
+			if (this.state === states.ACTIVE) {
+				this.__start();		// now the real state is aligned with the 'official' state.
+			}
+			// if (this.state === states.PAUSED), we don't have to do anything because time is already paused.
 		};
 
 		TimeController.prototype.registerListener = function(listener) {
@@ -387,12 +413,8 @@
 			this.listeners.push(listener);
 		};
 
-		TimeController.prototype.getTime = function() {
+		TimeController.prototype.getSimulationTime = function() {			// returns time in units of: milliseconds of simulation time
 
-			var realOffset = 0;
-			if (this.state === states.ACTIVE) {
-				realOffset = Date.now() - this.synchron.real;
-			}
 			return this.synchron.simulation;
 		};
 
@@ -407,6 +429,6 @@
 	window['TimeController'].prototype['scrub'] = TimeController.prototype.scrub;
 
 	window['TimeController'].prototype['subscribe'] = TimeController.prototype.subscribe;
-	window['TimeController'].prototype['getTime'] = TimeController.prototype.getTime;
+	window['TimeController'].prototype['getSimulationTime'] = TimeController.prototype.getSimulationTime;
 
 })();

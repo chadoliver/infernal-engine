@@ -50,14 +50,14 @@
 			// happened in the 'past' (within simulation time, at least).
 			var delay = realTime - Date.now();
 
-			return delay;
+			return delay;		// delay has units of milliseconds of wall time.
 		};
 
 		SimulationInstant.prototype.start = function(sampleTimeSpeedup, simulationTimeOffset) {
 			
 			this.pause();	// cancel any running timer.
 
-			var delay = this.getDelay(sampleTimeSpeedup, simulationTimeOffset);
+			var delay = this.getDelay(sampleTimeSpeedup, simulationTimeOffset);		// delay has units of milliseconds of wall time.
 			this.updateTemporalState(delay);
 
 			if (delay > 0) {	// it's no use setting a timeout if the event happens in the past.
@@ -80,7 +80,7 @@
 				this.pause();	// cancel the running timer.
 			}
 			
-			var delay = this.getDelay(sampleTimeSpeedup, simulationTimeOffset);
+			var delay = this.getDelay(sampleTimeSpeedup, simulationTimeOffset);		// delay has units of milliseconds of wall time.
 			this.updateTemporalState(delay);
 
 			if (wasActive && (delay > 0)) {	// it's no use setting a timeout if the event happens in the past.
@@ -142,9 +142,9 @@
 			this.message = message;
 			this.location = location;
 			this.personId = personId;
-			this.sampleTime = sampleTime;
+			this.sampleTime = sampleTime;		// units: milliseconds of sample time
 
-			this.simulationInstant = new SimulationInstant(this.sampleTime, timeController.zeroTime);
+			this.simulationInstant = new SimulationInstant(this.sampleTime, timeController.zeroTime);		// both parameters have units of milliseconds of sample time
 			timeController.registerListener(this.simulationInstant);
 			this.simulationInstant.registerListener(this);
 
@@ -153,7 +153,7 @@
 		}
 
 		Action.prototype.activate = function() {
-			// this is called by the Action's associated Time instance.
+			// this is called by the Action's associated SimulationInstant instance.
 			
 			if ( ! this.isActive) {
 				this.isActive = true;
@@ -163,7 +163,7 @@
 		};
 
 		Action.prototype.deactivate = function() {
-			// this is called by the Action's associated Time instance.
+			// this is called by the Action's associated SimulationInstant instance.
 			
 			if (this.isActive) {
 				this.isActive = false;

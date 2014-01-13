@@ -23,7 +23,7 @@ starter.wait(function () {
 
     //===========================================================================================================//
 
-    var sampleTimeSpeedup = 10;
+    var sampleTimeSpeedup = 7;
     var zeroTime = 0; 
     var timeController = new TimeController(zeroTime, sampleTimeSpeedup);
 
@@ -34,10 +34,11 @@ starter.wait(function () {
     personSet.putPerson(4, 'Norman');
 
     var actionSet = new ActionSet(timeController, personSet);
-    actionSet.putAction('1 foo bar baz', new Location(-43.38, 171.22), 1, 12000);
+    /*actionSet.putAction('1 foo bar baz', new Location(-43.38, 171.22), 1, 12000);   // time is in milliseconds of sample time.
     actionSet.putAction('2 foo bar baz', new Location(-43.43, 171.18), 2, 24000);
     actionSet.putAction('3 foo bar baz', new Location(-43.41, 171.33), 3, 36000);
     actionSet.putAction('4 foo bar baz', new Location(-43.415, 171.34), 4, 48000);
+    */
 
     timeController.begin();
 
