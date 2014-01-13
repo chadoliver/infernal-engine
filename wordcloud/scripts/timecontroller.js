@@ -126,14 +126,20 @@
 			return tickInterval;
 		};
 
+		ProgressBar.prototype.normaliseSampleTime = function(sampleTime) {
+			return Math.max(this.zeroTime, Math.min(this.endTime, sampleTime));
+		};
+
 		ProgressBar.prototype.moveIndicatorTo = function(sampleTime, railWidth) {
 
+			sampleTime = this.normaliseSampleTime(sampleTime);
 			railWidth = railWidth || this.elements.rail.clientWidth;
 
 			var pixelsPerMillisecond =  railWidth / (this.endTime - this.zeroTime);
 			var newPosition = sampleTime*pixelsPerMillisecond;
-			var boundedPosition = Math.max(0, Math.min(railWidth, newPosition));
-			this.elements.indicator.style.marginLeft = boundedPosition;
+			this.elements.indicator.style.marginLeft = newPosition;
+
+			console.log('sampleTime:', sampleTime, 'position:', newPosition);
 		};
 
 		ProgressBar.prototype.onMouseDown = function(event) {
@@ -175,7 +181,7 @@
 			var newSampleTime = this.currentSampleTime + pixelRatio*(this.endTime - this.zeroTime);
 
 			this.previousMousePosition = event.x;
-			this.currentSampleTime = newSampleTime;
+			this.currentSampleTime = this.normaliseSampleTime(newSampleTime);
 
 			this.moveIndicatorTo(newSampleTime, railWidth);
 			
@@ -321,14 +327,14 @@
 
 		TimeController.prototype.begin = function() {
 			// This function should be called once the system has been assembled. It hooks up the UI and starts time ticking.
-
-			var progressBar = new ProgressBar(this.zeroTime, this.zeroTime + 10000);
 			
 			var playPauseButton = new PlayPauseButton();
-			var clock = new Clock(this.zeroTime);
-
-			this.registerListener(clock);
 			playPauseButton.registerListener(this);
+
+			var clock = new Clock(this.zeroTime);
+			this.registerListener(clock);
+
+			var progressBar = new ProgressBar(this.zeroTime, this.zeroTime + 100000);
 			progressBar.registerListener(this);
 			this.registerListener(progressBar);
 
