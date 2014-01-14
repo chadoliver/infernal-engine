@@ -157,7 +157,7 @@
 			
 			if ( ! this.isActive) {
 				this.isActive = true;
-				console.log('activated');
+				console.log('activated:', this.personId, this.sampleTime);
 				this.notifyListeners();
 			}
 		};
@@ -167,7 +167,7 @@
 			
 			if (this.isActive) {
 				this.isActive = false;
-				console.log('deactivated');
+				console.log('deactivated:', this.personId, this.sampleTime);
 				this.notifyListeners();
 			}
 		};

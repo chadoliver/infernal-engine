@@ -156,7 +156,6 @@
 			*/
 			
 			if (action.isActive) {
-				console.log(action.message);
 				this.progressLocation(action);
 			} 
 			else { // if time is being rolled back

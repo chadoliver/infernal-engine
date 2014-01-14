@@ -54,7 +54,6 @@
 		};
 
 		PlayPauseButton.prototype.registerListener = function(listener) {
-			console.log('listening to playPauseButton');
 			this.listeners.push(listener);
 		};
 
@@ -80,20 +79,24 @@
 
 			var self = this;
 
-			this.zeroTime = zeroTime || 0;			// units: milliseconds of sample time
-			this.endTime  = endTime  || 0;			// units: milliseconds of sample time
-			this.currentSampleTime = this.zeroTime;		// units: milliseconds of sample time
-
-			this.sampleTimeSpeedup = null;
-			this.simulationTimeOffset = null;
-
-			this.intervalHandle =  null;			// this is always null iff simulation time is paused.
-
 			this.elements = {
 				rail: document.getElementById('rail'),
 				indicator: document.getElementById('indicator'),
 				handle: document.getElementById('handle'),
 			};
+
+			this.zeroTime = zeroTime || 0;			// units: milliseconds of sample time
+			this.endTime  = endTime  || 0;			// units: milliseconds of sample time
+
+			this.listeners = [];
+			this.intervalHandle = null;
+			this.sampleTimeSpeedup = null;
+			this.simulationTimeOffset = null;			
+
+			this.width = this.elements.rail.clientWidth;
+			this.horizontalOffset = this.elements.rail.getBoundingClientRect().left;
+			this.sampleMillisecondsPerPixel = (this.endTime - this.zeroTime) / this.width;
+			this.simulationMillisecondsPerPixel = null;	// this can only be set once we know sampleTimeSpeedup.
 
 			this.eventHandlers = {
 				onMouseDown: self.onMouseDown.bind(self),
@@ -103,43 +106,18 @@
 			};
 
 			this.elements.handle.addEventListener("mousedown", this.eventHandlers.onMouseDown, true);
-
-			this.previousMousePosition = null;				// this is the mouse's horizontal position at timeOfLastScrub.
-			this.tickInterval = this.determineTickInterval();
-			this.listeners = [];
 		}
 
-		ProgressBar.prototype.determineTickInterval = function() {
-			// We want to update with an interval which is the greater of:
-			// 	1) The time it takes for the indicator to move half a pixel, or
-			//  2) 50 ms, being approximately the smallest interval noticable to humans.
-
-			// assumption: zeroTime and endTime are in milliseconds.
-			
-			var pixels = this.elements.rail.clientWidth;
-			var pixelMovementInterval = (this.endTime - this.zeroTime) / pixels;
-
-			var tickInterval = Math.max(50, pixelMovementInterval);
-
-			console.log('tick interval:', tickInterval);
-
-			return tickInterval;
+		ProgressBar.prototype.normalisePosition = function(position) {
+			return Math.max(0, Math.min(this.width, position));
 		};
 
-		ProgressBar.prototype.normaliseSampleTime = function(sampleTime) {
-			return Math.max(this.zeroTime, Math.min(this.endTime, sampleTime));
-		};
+		ProgressBar.prototype.moveIndicatorTo = function(sampleTime) {
 
-		ProgressBar.prototype.moveIndicatorTo = function(sampleTime, railWidth) {
-
-			sampleTime = this.normaliseSampleTime(sampleTime);
-			railWidth = railWidth || this.elements.rail.clientWidth;
-
-			var pixelsPerMillisecond =  railWidth / (this.endTime - this.zeroTime);
-			var newPosition = sampleTime*pixelsPerMillisecond;
+			var newPosition = this.normalisePosition(sampleTime / this.sampleMillisecondsPerPixel);
 			this.elements.indicator.style.marginLeft = newPosition;
 
-			console.log('sampleTime:', sampleTime, 'position:', newPosition);
+			//console.log('sampleTime:', sampleTime, 'position:', newPosition);
 		};
 
 		ProgressBar.prototype.onMouseDown = function(event) {
@@ -148,7 +126,6 @@
 			pauseEvent(event || window.event);
 			console.log('mouse down');
 
-			this.previousMousePosition = event.x;
 			document.addEventListener('mousemove', this.eventHandlers.onMouseMove, false);
 			document.addEventListener('mouseup', this.eventHandlers.onMouseUp, true);
 
@@ -176,14 +153,11 @@
 
 			pauseEvent(event || window.event);
 
-			var railWidth = this.elements.rail.clientWidth;
-			var pixelRatio = (event.x - this.previousMousePosition) / railWidth;
-			var newSampleTime = this.currentSampleTime + pixelRatio*(this.endTime - this.zeroTime);
+			var position = this.normalisePosition(event.x - this.horizontalOffset);
+			var newSampleTime = position * this.sampleMillisecondsPerPixel;
+			console.log(newSampleTime);
 
-			this.previousMousePosition = event.x;
-			this.currentSampleTime = this.normaliseSampleTime(newSampleTime);
-
-			this.moveIndicatorTo(newSampleTime, railWidth);
+			this.moveIndicatorTo(newSampleTime);
 			
 			// notify listener(s)
 			for (var i = 0; i < this.listeners.length; i++) {
@@ -198,8 +172,12 @@
 			this.sampleTimeSpeedup = sampleTimeSpeedup;
 			this.simulationTimeOffset = simulationTimeOffset;
 
-			this.onTick();
-			this.intervalHandle = setInterval(this.eventHandlers.onTick, this.tickInterval); 	// update the screen every 20th of a second.
+			this.simulationMillisecondsPerPixel = this.sampleMillisecondsPerPixel / sampleTimeSpeedup;
+			var tickInterval = Math.max(50, this.simulationMillisecondsPerPixel);
+
+			this.intervalHandle = setInterval(this.eventHandlers.onTick, tickInterval);
+
+			console.log('interval:', tickInterval);
 		};
 
 		ProgressBar.prototype.pause = function() {
@@ -214,12 +192,13 @@
 
 			var simulationTime = Date.now() - this.simulationTimeOffset;						// units: milliseconds of simulation time
 			var sampleTime = simulationTime / this.sampleTimeSpeedup + this.zeroTime;			// units: milliseconds of sample time
+
+			console.log('tick');
 			
 			this.moveIndicatorTo(sampleTime);
 		};
 
 		ProgressBar.prototype.registerListener = function(listener) {
-			console.log('listening to ProgressBar');
 			this.listeners.push(listener);
 		};
 	
@@ -334,7 +313,7 @@
 			var clock = new Clock(this.zeroTime);
 			this.registerListener(clock);
 
-			var progressBar = new ProgressBar(this.zeroTime, this.zeroTime + 100000);
+			var progressBar = new ProgressBar(this.zeroTime, this.zeroTime + 1000*1000);
 			progressBar.registerListener(this);
 			this.registerListener(progressBar);
 
@@ -415,7 +394,6 @@
 		};
 
 		TimeController.prototype.registerListener = function(listener) {
-			console.log('listening to timeController');
 			this.listeners.push(listener);
 		};
 
