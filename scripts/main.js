@@ -1,87 +1,50 @@
-
 starter.wait(function () {
 
+    var map = new Map('SATELLITE', 11, new Location(-43.38, 171.22));
 
-    var map = new google.maps.Map(document.getElementById('map'), {
-        center: new google.maps.LatLng(-43.38, 171.22),
-        zoom: 11,
-        //mapTypeId: google.maps.MapTypeId.ROADMAP,
-        //mapTypeId: google.maps.MapTypeId.HYBRID,
-        mapTypeId: google.maps.MapTypeId.SATELLITE,
-        disableDefaultUI: true,
-        rotateControl: true,
-    });
+    //===========================================================================================================//
 
-    var markers = [
-        new google.maps.Marker({
-            position: new google.maps.LatLng(-43.38, 171.22),
-            map: map,
-            title: 'Tim'
-        }),
-        new google.maps.Marker({
-            position: new google.maps.LatLng(-43.43, 171.18),
-            map: map,
-            title: 'Jerry'
-        }),
-        new google.maps.Marker({
-            position: new google.maps.LatLng(-43.41, 171.33),
-            map: map,
-            title: 'Russel'
-        }),
-        new google.maps.Marker({
-            position: new google.maps.LatLng(-43.415, 171.34),
-            map: map,
-            title: 'Russel'
-        })
-    ];
+    var wordCloud = new WordCloud('wordcloud', constants.FONT_WEIGHT, constants.FONT_NAME);
 
-    var width = 350;
-    var height = 300;
+    wordCloud.putWord('scrub', 13);
+    wordCloud.putWord('plume', 10);
+    wordCloud.putWord('black', 8);
+    wordCloud.putWord('fire', 7);
+    wordCloud.putWord('jiff', 5);
+    wordCloud.putWord('plume-driven', 4);
+    wordCloud.putWord('bubble', 3);
+    wordCloud.putWord('cheese', 2);
+    wordCloud.putWord('wooler', 2);
+    wordCloud.putWord('triskele', 2);
+    wordCloud.putWord('gasp', 2);
+    wordCloud.putWord('hennig', 1);
 
-    var background = new Background('wordcloud', width, height);
-    var coordinates = background.getOrderedCoordinates();
+    wordCloud.paint();
 
-    
-    var words = [
-    	new Word('scrub', 15), 
-    	new Word('plume', 10), 
-    	new Word('black', 8),
-    	new Word('fire', 6), 
-    	new Word('wind-driven', 4),
-        new Word('northerly', 4),
-    	new Word('dead', 2),
+    //===========================================================================================================//
 
-    ];
+    var sampleTimeSpeedup = 1;
+    var zeroTime = 0; 
+    var timeController = new TimeController(zeroTime, sampleTimeSpeedup);
 
-    for (var i=0; i<words.length; i++) words[i].paint(background);
+    var personSet = new PersonSet(map);
+    personSet.putPerson(1, 'Tim');
+    personSet.putPerson(2, 'Jerry');
+    personSet.putPerson(3, 'Russel');
+    personSet.putPerson(4, 'Norman');
 
-	var center = new Coordinate(width/2,height/2);
-	center.paint(background.canvas);
+    var actionSet = new ActionSet(timeController, personSet);
+    actionSet.putAction("The fire truck has arrived. Where do you want it?", new Location(-43.41, 171.33), 1, 12000);   // time is in milliseconds of sample time.
+    actionSet.putAction("We've only got a small 2m by 2m fire in the grass.", new Location(-43.43, 171.18), 2, 24000);
+    actionSet.putAction("The fire here is looking to jump over the road." , new Location(-43.38, 171.22), 3, 36000);
+    actionSet.putAction("Send the fire truck over to Russel.", new Location(-43.415, 171.34), 4, 48000);
 
 
-    var elements = {
-        minutes: document.getElementById('minutes'),
-        seconds: document.getElementById('seconds'),
-    };
+    timeController.begin();
 
-    var counters = {
-        minutes: 0,
-        seconds: 0,
-    };
 
-    var pad = function (number) {
-        return ("0" + number.toString()).slice(-2);
-    }
-    
-    var timer = window.setInterval(function() {
+    //===========================================================================================================//
 
-        counters.seconds++;
-        if (counters.seconds >= 60) {
-            counters.minutes++;
-            counters.seconds = 0;
-            elements.minutes.innerHTML = pad(counters.minutes);
-        } 
-        elements.seconds.innerHTML = pad(counters.seconds);
-    }, 1000);
-
+    window['map'] = map;
+    window['timeController'] = timeController; 
 });
