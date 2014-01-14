@@ -155,12 +155,32 @@
 				  anything at the moment.
 			*/
 			
+			var messagesDiv = document.getElementById('messages');
+
 			if (action.isActive) {
 				this.progressLocation(action);
+
+				var messageWrapper = document.createElement('div');
+				messageWrapper.className = 'messageWrapper';
+				messageWrapper.id = action.sampleTime.toString();
+
+				var message = document.createElement('div');
+				message.className = 'message';
+				message.innerHTML = this.name + ": " + action.message;
+
+				messageWrapper.appendChild(message);
+				messagesDiv.appendChild(messageWrapper);
 			} 
 			else { // if time is being rolled back
 				this.regressLocation(action);
+
+				var oldMessage = document.getElementById(action.sampleTime.toString());
+				if (oldMessage !== null) {
+					messagesDiv.removeChild(oldMessage);
+				}
 			}
+
+
 		};
 
 		return Person;

@@ -43,7 +43,20 @@ body {
 #messages {
     font-family: 'Open Sans', sans-serif;
     font-weight: 300; 
+    font-size: 0.8em;
     line-height: 1;
+}
+.messageWrapper {
+    padding: 10px 10px;
+    border-bottom: 1px rgba(0, 0, 0, 0.2) solid;
+}
+
+.message {
+
+}
+
+#thumbnail {
+    width: 350px;
 }
 
 #progress {
