@@ -117,7 +117,7 @@
 			var newPosition = this.normalisePosition(sampleTime / this.sampleMillisecondsPerPixel);
 			this.elements.indicator.style.marginLeft = newPosition;
 
-			//console.log('sampleTime:', sampleTime, 'position:', newPosition);
+			//console.log('pos:', newPosition, 'sampleT:', sampleTime);
 		};
 
 		ProgressBar.prototype.onMouseDown = function(event) {
@@ -155,7 +155,6 @@
 
 			var position = this.normalisePosition(event.x - this.horizontalOffset);
 			var newSampleTime = position * this.sampleMillisecondsPerPixel;
-			console.log(newSampleTime);
 
 			this.moveIndicatorTo(newSampleTime);
 			
@@ -175,9 +174,11 @@
 			this.simulationMillisecondsPerPixel = this.sampleMillisecondsPerPixel / sampleTimeSpeedup;
 			var tickInterval = Math.max(50, this.simulationMillisecondsPerPixel);
 
+			console.log('sample ms/px:', this.sampleMillisecondsPerPixel, 'simulation ms/px:', this.simulationMillisecondsPerPixel, 'tick interval:', tickInterval);
+			this.onTick();
 			this.intervalHandle = setInterval(this.eventHandlers.onTick, tickInterval);
 
-			console.log('interval:', tickInterval);
+			//console.log('interval:', tickInterval);
 		};
 
 		ProgressBar.prototype.pause = function() {
@@ -192,8 +193,9 @@
 
 			var simulationTime = Date.now() - this.simulationTimeOffset;						// units: milliseconds of simulation time
 			var sampleTime = simulationTime / this.sampleTimeSpeedup + this.zeroTime;			// units: milliseconds of sample time
+			//console.log('onTick simulationTime:', simulationTime);
 
-			console.log('tick');
+			//console.log('tick');
 			
 			this.moveIndicatorTo(sampleTime);
 		};
@@ -313,7 +315,7 @@
 			var clock = new Clock(this.zeroTime);
 			this.registerListener(clock);
 
-			var progressBar = new ProgressBar(this.zeroTime, this.zeroTime + 1000*1000);
+			var progressBar = new ProgressBar(this.zeroTime, this.zeroTime + 300*1000);
 			progressBar.registerListener(this);
 			this.registerListener(progressBar);
 
@@ -371,9 +373,12 @@
 			this.__pause();	// this pauses time without altering the associated metadata. For example, this.state is unchanged.
 		};
 
-		TimeController.prototype.scrub = function(simulationTime) {
+		TimeController.prototype.scrub = function(sampleTime) {
 			// Change the current simulation time, without changing the real time. Equivalent to skipping forwards or 
 			// backwards in a movie.
+
+			var simulationTime = (sampleTime + this.zeroTime) / this.sampleTimeSpeedup;
+			console.log('TimeController scrub simulationTime:', simulationTime);
 
 			var offset = Date.now() - simulationTime;						// units: milliseconds of real time
 			this.synchron.simulation = simulationTime;						// units: milliseconds of simulation time
