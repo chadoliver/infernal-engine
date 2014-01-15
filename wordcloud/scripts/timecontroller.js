@@ -116,15 +116,12 @@
 
 			var newPosition = this.normalisePosition(sampleTime / this.sampleMillisecondsPerPixel);
 			this.elements.indicator.style.marginLeft = newPosition;
-
-			//console.log('pos:', newPosition, 'sampleT:', sampleTime);
 		};
 
 		ProgressBar.prototype.onMouseDown = function(event) {
 			// enter 'scrubbing' mode
 
 			pauseEvent(event || window.event);
-			console.log('mouse down');
 
 			document.addEventListener('mousemove', this.eventHandlers.onMouseMove, false);
 			document.addEventListener('mouseup', this.eventHandlers.onMouseUp, true);
@@ -138,7 +135,7 @@
 		ProgressBar.prototype.onMouseUp = function() {
 			// exit scrubbing mode
 
-			console.log('mouse up');
+			pauseEvent(event || window.event);
 
 			document.removeEventListener('mousemove', this.eventHandlers.onMouseMove, false);
 			document.removeEventListener('mouseup', this.eventHandlers.onMouseUp, true);
@@ -154,13 +151,13 @@
 			pauseEvent(event || window.event);
 
 			var position = this.normalisePosition(event.x - this.horizontalOffset);
-			var newSampleTime = position * this.sampleMillisecondsPerPixel;
+			var sampleTime = position * this.sampleMillisecondsPerPixel;
 
-			this.moveIndicatorTo(newSampleTime);
-			
+			this.moveIndicatorTo(sampleTime);			
+
 			// notify listener(s)
 			for (var i = 0; i < this.listeners.length; i++) {
-				this.listeners[i].scrub(newSampleTime);
+				this.listeners[i].scrub(sampleTime);
 			};
 		};
 
@@ -174,11 +171,8 @@
 			this.simulationMillisecondsPerPixel = this.sampleMillisecondsPerPixel / sampleTimeSpeedup;
 			var tickInterval = Math.max(50, this.simulationMillisecondsPerPixel);
 
-			console.log('sample ms/px:', this.sampleMillisecondsPerPixel, 'simulation ms/px:', this.simulationMillisecondsPerPixel, 'tick interval:', tickInterval);
 			this.onTick();
 			this.intervalHandle = setInterval(this.eventHandlers.onTick, tickInterval);
-
-			//console.log('interval:', tickInterval);
 		};
 
 		ProgressBar.prototype.pause = function() {
@@ -192,10 +186,7 @@
 		ProgressBar.prototype.onTick = function() {
 
 			var simulationTime = Date.now() - this.simulationTimeOffset;						// units: milliseconds of simulation time
-			var sampleTime = simulationTime / this.sampleTimeSpeedup + this.zeroTime;			// units: milliseconds of sample time
-			//console.log('onTick simulationTime:', simulationTime);
-
-			//console.log('tick');
+			var sampleTime = simulationTime * this.sampleTimeSpeedup + this.zeroTime;			// units: milliseconds of sample time
 			
 			this.moveIndicatorTo(sampleTime);
 		};
@@ -378,7 +369,6 @@
 			// backwards in a movie.
 
 			var simulationTime = (sampleTime + this.zeroTime) / this.sampleTimeSpeedup;
-			console.log('TimeController scrub simulationTime:', simulationTime);
 
 			var offset = Date.now() - simulationTime;						// units: milliseconds of real time
 			this.synchron.simulation = simulationTime;						// units: milliseconds of simulation time

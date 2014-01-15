@@ -23,7 +23,7 @@ starter.wait(function () {
 
     //===========================================================================================================//
 
-    var sampleTimeSpeedup = 1;
+    var sampleTimeSpeedup = 10;
     var zeroTime = 0; 
     var timeController = new TimeController(zeroTime, sampleTimeSpeedup);
 
