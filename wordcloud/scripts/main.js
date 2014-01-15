@@ -24,8 +24,9 @@ starter.wait(function () {
     //===========================================================================================================//
 
     var sampleTimeSpeedup = 10;
-    var zeroTime = 0; 
-    var timeController = new TimeController(zeroTime, sampleTimeSpeedup);
+    var zeroTime = 20*1000;
+    var endTime = 300*1000;
+    var timeController = new TimeController(zeroTime, endTime, sampleTimeSpeedup);
 
     var personSet = new PersonSet(map);
     personSet.putPerson(1, 'Tim');
@@ -34,8 +35,8 @@ starter.wait(function () {
     personSet.putPerson(4, 'Norman');
 
     var actionSet = new ActionSet(timeController, personSet);
-    actionSet.putAction("The fire truck has arrived. Where do you want it?", new Location(-43.41, 171.33), 1, 12000);   // time is in milliseconds of sample time.
-    actionSet.putAction("We've only got a small 2m by 2m fire in the grass.", new Location(-43.43, 171.18), 2, 24000);
+    actionSet.putAction("The fire truck has arrived. Where do you want it?", new Location(-43.41, 171.33), 1, 22000);   // time is in milliseconds of sample time.
+    actionSet.putAction("We've only got a small 2m by 2m fire in the grass.", new Location(-43.43, 171.18), 2, 28000);
     actionSet.putAction("The fire here is looking to jump over the road." , new Location(-43.38, 171.22), 3, 36000);
     actionSet.putAction("Send the fire truck over to Russel.", new Location(-43.415, 171.34), 4, 48000);
 
