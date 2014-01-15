@@ -32,6 +32,7 @@ body {
     bottom: 20px;
     left: 20px;
     width: 350px;
+    overflow: hidden;
 }
 
 #wordcloud {
