@@ -403,7 +403,7 @@
 		function WordCloud(id, fontweight, fontname) {
 
 			var width = 350;
-			var height = 300;
+			var height = 250;
 
 			/** @private */
 			this.fontweight = fontweight;
