@@ -39,6 +39,8 @@ starter.wait(function () {
     actionSet.putAction("We've only got a small 2m by 2m fire in the grass.", new Location(-43.43, 171.18), 2, 28000);
     actionSet.putAction("The fire here is looking to jump over the road." , new Location(-43.38, 171.22), 3, 36000);
     actionSet.putAction("Send the fire truck over to Russel.", new Location(-43.415, 171.34), 4, 48000);
+    actionSet.putAction(null, new Location(-43.42, 171.34), 4, 50000);
+    actionSet.putAction(null, new Location(-43.425, 171.34), 4, 52000);
 
 
     timeController.begin();

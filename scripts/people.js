@@ -30,20 +30,28 @@
 		Marker.prototype.showAt = function(location) {
 			
 			if (location === undefined) {
+				// do nothing.
+			}
+			else if (location === null) {
+				// remove the marker.
 				this.hide();
 			}
-			else if (this.marker === null) {
-				// the marker doesn't exist, so we create it
-
-				this.marker = new google.maps.Marker({
-				    position: location.toGoogle(),
-				    map: this.map.map,	// this.map is an instance of Map(), while this.map.map is an instance of google.maps.Map().
-				    title: this.person.name
-				});
-			}
 			else {
-				// the marker exists, so we just need to change the location.
-				this.marker.setPosition(location.latitude, location.longitude);
+				// if location is actually an instance of Location:
+
+				if (this.marker === null) {
+					// the marker doesn't exist, so we create it
+
+					this.marker = new google.maps.Marker({
+					    position: location.toGoogle(),
+					    map: this.map.map,	// this.map is an instance of Map(), while this.map.map is an instance of google.maps.Map().
+					    title: this.person.name
+					});
+				}
+				else {
+					// the marker exists, so we just need to change the location.
+					this.marker.setPosition(location.toGoogle());
+				}
 			}
 		};
 	
@@ -136,10 +144,36 @@
 			// else the action doesn't influence the current location, so we don't do anything.
 		};
 
-		Person.prototype.updateOnAction = function(action) {
+		Person.prototype.publishMessage = function(action) {
 
-			/*
-			There are two issues here: dealing with changes to the set of active messages, and dealing with 
+			if ((action.message !== undefined) && (action.message !== null)) {
+
+				var messagesDiv = document.getElementById('messages');
+				var messageWrapper = document.createElement('div');
+				var message = document.createElement('div');
+
+				messageWrapper.className = 'messageWrapper';
+				messageWrapper.id = action.sampleTime.toString();
+				
+				message.className = 'message';
+				message.innerHTML = this.name + ": " + action.message;
+
+				messageWrapper.appendChild(message);
+				messagesDiv.appendChild(messageWrapper);
+			}
+		}
+
+		Person.prototype.retractMessage = function(action) {
+			
+			var oldMessage = document.getElementById(action.sampleTime.toString());
+			if (oldMessage !== null) {
+				var messagesDiv = document.getElementById('messages');
+				messagesDiv.removeChild(oldMessage);
+			}
+		};
+
+		Person.prototype.updateOnAction = function(action) {
+			/* There are two issues here: dealing with changes to the set of active messages, and dealing with 
 			changes to the Person's current location. At the moment, we won't consider changes to the set of 
 			active messages. This will come later.
 
@@ -154,32 +188,15 @@
 				  deactivation doesn't influence the current location, then obviously we don't need to do 
 				  anything at the moment.
 			*/
-			
-			var messagesDiv = document.getElementById('messages');
 
 			if (action.isActive) {
 				this.progressLocation(action);
-
-				var messageWrapper = document.createElement('div');
-				messageWrapper.className = 'messageWrapper';
-				messageWrapper.id = action.sampleTime.toString();
-
-				var message = document.createElement('div');
-				message.className = 'message';
-				message.innerHTML = this.name + ": " + action.message;
-
-				messageWrapper.appendChild(message);
-				messagesDiv.appendChild(messageWrapper);
+				this.publishMessage(action);
 			} 
 			else { // if time is being rolled back
 				this.regressLocation(action);
-
-				var oldMessage = document.getElementById(action.sampleTime.toString());
-				if (oldMessage !== null) {
-					messagesDiv.removeChild(oldMessage);
-				}
+				this.retractMessage(action);
 			}
-
 
 		};
 
