@@ -70,8 +70,8 @@
 		function pauseEvent(e){
 		    if(e.stopPropagation) e.stopPropagation();
 		    if(e.preventDefault) e.preventDefault();
-		    e.cancelBubble=true;
-		    e.returnValue=false;
+		    e.cancelBubble = true;
+		    e.returnValue = false;
 		    return false;
 		}
 	
@@ -114,8 +114,9 @@
 
 		ProgressBar.prototype.moveIndicatorTo = function(sampleTime) {
 
-			var newPosition = this.normalisePosition(sampleTime / this.sampleMillisecondsPerPixel);
-			this.elements.indicator.style.marginLeft = newPosition;
+			var position = (sampleTime - this.zeroTime) / this.sampleMillisecondsPerPixel;
+			var normalisedPosition = this.normalisePosition(position);
+			this.elements.indicator.style.marginLeft = normalisedPosition;
 		};
 
 		ProgressBar.prototype.onMouseDown = function(event) {
@@ -150,8 +151,9 @@
 
 			pauseEvent(event || window.event);
 
-			var position = this.normalisePosition(event.x - this.horizontalOffset);
-			var sampleTime = position * this.sampleMillisecondsPerPixel;
+			var position = event.x - this.horizontalOffset
+			var normalisedPosition = this.normalisePosition(position);
+			var sampleTime = normalisedPosition * this.sampleMillisecondsPerPixel + this.zeroTime;
 
 			this.moveIndicatorTo(sampleTime);			
 
@@ -283,9 +285,10 @@
 			ACTIVE: 'active'
 		};
 
-		function TimeController(zeroTime, sampleTimeSpeedup) {
+		function TimeController(zeroTime, endTime, sampleTimeSpeedup) {
 
 			this.zeroTime = zeroTime || 0;	// units: milliseconds of sample time
+			this.endTime = endTime || 100*1000;
 			this.sampleTimeSpeedup = sampleTimeSpeedup || 1;
 
 			this.listeners = [];
@@ -306,7 +309,7 @@
 			var clock = new Clock(this.zeroTime);
 			this.registerListener(clock);
 
-			var progressBar = new ProgressBar(this.zeroTime, this.zeroTime + 300*1000);
+			var progressBar = new ProgressBar(this.zeroTime, this.endTime);
 			progressBar.registerListener(this);
 			this.registerListener(progressBar);
 
@@ -368,7 +371,7 @@
 			// Change the current simulation time, without changing the real time. Equivalent to skipping forwards or 
 			// backwards in a movie.
 
-			var simulationTime = (sampleTime + this.zeroTime) / this.sampleTimeSpeedup;
+			var simulationTime = (sampleTime - this.zeroTime) / this.sampleTimeSpeedup;
 
 			var offset = Date.now() - simulationTime;						// units: milliseconds of real time
 			this.synchron.simulation = simulationTime;						// units: milliseconds of simulation time
