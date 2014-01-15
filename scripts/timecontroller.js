@@ -80,6 +80,7 @@
 			var self = this;
 
 			this.elements = {
+				context: document.getElementById('scrubber'),
 				rail: document.getElementById('rail'),
 				indicator: document.getElementById('indicator'),
 				handle: document.getElementById('handle'),
@@ -102,10 +103,14 @@
 				onMouseDown: self.onMouseDown.bind(self),
 				onMouseUp: self.onMouseUp.bind(self),
 				onMouseMove: self.onMouseMove.bind(self),
+				onMouseClick: self.onMouseClick.bind(self),
 				onTick: self.onTick.bind(self)
 			};
 
 			this.elements.handle.addEventListener("mousedown", this.eventHandlers.onMouseDown, true);
+			this.elements.rail.addEventListener("click", this.eventHandlers.onMouseClick, true);
+
+			this.elements.rail.addEventListener("mousedown", function(){pauseEvent(event || window.event)}, true);
 		}
 
 		ProgressBar.prototype.normalisePosition = function(position) {
@@ -160,6 +165,24 @@
 			// notify listener(s)
 			for (var i = 0; i < this.listeners.length; i++) {
 				this.listeners[i].scrub(sampleTime);
+			};
+		};
+
+		ProgressBar.prototype.onMouseClick = function(event) {
+
+			pauseEvent(event || window.event);
+
+			var position = event.x - this.horizontalOffset
+			var normalisedPosition = this.normalisePosition(position);
+			var sampleTime = normalisedPosition * this.sampleMillisecondsPerPixel + this.zeroTime;
+
+			this.moveIndicatorTo(sampleTime);			
+
+			// notify listener(s)
+			for (var i = 0; i < this.listeners.length; i++) {
+				this.listeners[i].enterScrubbingMode();
+				this.listeners[i].scrub(sampleTime);
+				this.listeners[i].exitScrubbingMode();
 			};
 		};
 
