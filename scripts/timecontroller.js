@@ -196,6 +196,21 @@
 		ProgressBar.prototype.registerListener = function(listener) {
 			this.listeners.push(listener);
 		};
+
+		ProgressBar.prototype.activate = function() {
+			// This method is called by any sampleInstants that ProgressBar subscribes to. In particular, it is called 
+			// by TimeController's stopInstant, which fires once the slider gets to the end of its rail.
+
+			console.log('progressBar should now reset. Scrubbing');
+
+			this.moveIndicatorTo(this.zeroTime);
+
+			for (var i = 0; i < this.listeners.length; i++) {
+				this.listeners[i].enterScrubbingMode();
+				this.listeners[i].scrub(this.zeroTime);
+				this.listeners[i].exitScrubbingMode();
+			};
+		};
 	
 		return ProgressBar;
 	})();
@@ -309,9 +324,13 @@
 			var clock = new Clock(this.zeroTime);
 			this.registerListener(clock);
 
-			var progressBar = new ProgressBar(this.zeroTime, this.endTime);
+			progressBar = new ProgressBar(this.zeroTime, this.endTime);
 			progressBar.registerListener(this);
 			this.registerListener(progressBar);
+
+			var stopInstant = new SampleInstant(this.endTime, this.zeroTime);	// the stop instant should fire when the slider gets to the end of its rail.
+			this.registerListener(stopInstant);
+			stopInstant.registerListener(progressBar);
 
 			playPauseButton.play();
 		};
