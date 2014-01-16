@@ -64,6 +64,78 @@
 	//===========================================================================================================//
 
 
+	var Clock = (function() {
+		// Clock is the class which encapsulates the digital clock in the bottom right of the web page. This 
+		// class is just a View component; it doesn't do anything except update the time on the screen.
+
+		var padNumber = function(number) {
+			return ("0" + number.toString()).slice(-2);
+		};
+
+		function Clock(zeroTime) {
+
+			// The clock displays the current Sample time. The Simulation time is trivially given by Date.now() - simulationTimeOffset,
+			// so the complexity comes from calculating sample time from simulation time.
+
+			this.zeroTime = zeroTime || 0;						// units: milliseconds of sample time
+			this.sampleTimeSpeedup = null;
+			this.simulationTimeOffset = null;					// units: milliseconds of real time
+			this.intervalHandle = null;
+
+			this.elements = {
+				hours: document.getElementById('hours'),
+				minutes: document.getElementById('minutes'),
+				seconds: document.getElementById('seconds')
+			};
+		}
+
+		Clock.prototype.start = function(sampleTimeSpeedup, simulationTimeOffset) {
+
+			this.pause(); // cancel any running timer.
+			this.scrub(sampleTimeSpeedup, simulationTimeOffset);
+			this.intervalHandle = setInterval(this.updateScreen.bind(this), 50); // update the screen every 20th of a second.
+		};
+
+		Clock.prototype.pause = function() {
+
+			if (this.intervalHandle !== null) {
+				clearInterval(this.intervalHandle);
+				this.intervalHandle = null;
+			}
+		};
+
+		Clock.prototype.scrub = function(sampleTimeSpeedup, simulationTimeOffset) {
+			this.sampleTimeSpeedup = sampleTimeSpeedup;	
+			this.simulationTimeOffset = simulationTimeOffset;	// units: milliseconds of real time
+			this.updateScreen();
+		};
+
+		Clock.prototype.updateScreen = function() {
+
+			var simulationTime = Date.now() - this.simulationTimeOffset;					// units: milliseconds of simulation time, obviously
+			var rawSampleTime = simulationTime * this.sampleTimeSpeedup + this.zeroTime; 	// units: milliseconds of sample time
+			var trimmed = Math.floor(rawSampleTime / 1000);
+
+			var seconds = Math.floor(trimmed % 60);
+			trimmed = trimmed / 60;
+
+			var minutes = Math.floor(trimmed % 60);
+			trimmed = trimmed / 60;
+
+			var hours = Math.floor(trimmed % 24);
+
+			this.elements.hours.innerHTML = padNumber(hours);
+			this.elements.minutes.innerHTML = padNumber(minutes);
+			this.elements.seconds.innerHTML = padNumber(seconds);
+		};
+
+		return Clock;
+	})();
+
+
+	//===========================================================================================================//
+
+
 	var ProgressBar = (function() {
 		// a descriptive comment ...
 
@@ -243,78 +315,6 @@
 		};
 	
 		return ProgressBar;
-	})();
-
-
-	//===========================================================================================================//
-
-
-	var Clock = (function() {
-		// Clock is the class which encapsulates the digital clock in the bottom right of the web page. This 
-		// class is just a View component; it doesn't do anything except update the time on the screen.
-
-		var padNumber = function(number) {
-			return ("0" + number.toString()).slice(-2);
-		};
-
-		function Clock(zeroTime) {
-
-			// The clock displays the current Sample time. The Simulation time is trivially given by Date.now() - simulationTimeOffset,
-			// so the complexity comes from calculating sample time from simulation time.
-
-			this.zeroTime = zeroTime || 0;						// units: milliseconds of sample time
-			this.sampleTimeSpeedup = null;
-			this.simulationTimeOffset = null;					// units: milliseconds of real time
-			this.intervalHandle = null;
-
-			this.elements = {
-				hours: document.getElementById('hours'),
-				minutes: document.getElementById('minutes'),
-				seconds: document.getElementById('seconds')
-			};
-		}
-
-		Clock.prototype.start = function(sampleTimeSpeedup, simulationTimeOffset) {
-
-			this.pause(); // cancel any running timer.
-			this.scrub(sampleTimeSpeedup, simulationTimeOffset);
-			this.intervalHandle = setInterval(this.updateScreen.bind(this), 50); // update the screen every 20th of a second.
-		};
-
-		Clock.prototype.pause = function() {
-
-			if (this.intervalHandle !== null) {
-				clearInterval(this.intervalHandle);
-				this.intervalHandle = null;
-			}
-		};
-
-		Clock.prototype.scrub = function(sampleTimeSpeedup, simulationTimeOffset) {
-			this.sampleTimeSpeedup = sampleTimeSpeedup;	
-			this.simulationTimeOffset = simulationTimeOffset;	// units: milliseconds of real time
-			this.updateScreen();
-		};
-
-		Clock.prototype.updateScreen = function() {
-
-			var simulationTime = Date.now() - this.simulationTimeOffset;					// units: milliseconds of simulation time, obviously
-			var rawSampleTime = simulationTime * this.sampleTimeSpeedup + this.zeroTime; 	// units: milliseconds of sample time
-			var trimmed = Math.floor(rawSampleTime / 1000);
-
-			var seconds = Math.floor(trimmed % 60);
-			trimmed = trimmed / 60;
-
-			var minutes = Math.floor(trimmed % 60);
-			trimmed = trimmed / 60;
-
-			var hours = Math.floor(trimmed % 24);
-
-			this.elements.hours.innerHTML = padNumber(hours);
-			this.elements.minutes.innerHTML = padNumber(minutes);
-			this.elements.seconds.innerHTML = padNumber(seconds);
-		};
-
-		return Clock;
 	})();
 
 
