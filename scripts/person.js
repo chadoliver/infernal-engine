@@ -248,11 +248,7 @@
 	//===========================================================================================================//
 
 
-	window['PersonSet'] = PersonSet; // <-- Constructor
-	window['PersonSet'].prototype['putPerson'] = PersonSet.prototype.putPerson;
-	window['PersonSet'].prototype['registerAction'] = PersonSet.prototype.registerAction;
-
-	window['Person'] = Person; // <-- Constructor
-	window['Person'].prototype['updateOnAction'] = Person.prototype.updateOnAction;
+	window['PersonSet'] = PersonSet;
+	window['Person'] = Person;
 
 })();
