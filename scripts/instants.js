@@ -1,3 +1,10 @@
+var inherit = function(childObj, parentClass) {
+    var tmpObj = function () {}
+    tmpObj.prototype = parentClass.prototype;
+    childObj.prototype = new tmpObj();
+    childObj.prototype.constructor = childObj;
+};
+
 var SampleInstant = (function () { 
 	// This class is used to represent a instant in Simulation Time. 
 
@@ -114,4 +121,44 @@ var SampleInstant = (function () {
 	};
 
 	return SampleInstant;
+})();
+
+//Validator.call(this);
+
+var ResetInstant = (function () { 
+	// This class is used to represent a instant in Simulation Time. 
+
+	var states = {
+		PAST: 'past',
+		FUTURE: 'future',
+	};
+
+	function ResetInstant (sampleTime, zeroTime) {
+		
+		this.sampleTime = sampleTime;	// this.sampleTime is the cannonical source of simulation time and real time.
+		this.zeroTime = zeroTime;		// this.zeroTime is the Sample Time of the earliest event.
+
+		this.timeoutHandle = null;
+		this.temporalState = states.FUTURE;
+		this.listeners = [];
+	}
+
+	ResetInstant.prototype = new SampleInstant();
+
+	ResetInstant.prototype.updateTemporalState = function(delay) {
+		
+		if ((this.temporalState === states.FUTURE) && (delay <= 0)) {
+			// Hey look, the event just happened! (Or at least, it has happened between now and whenever we
+			// last checked.)
+			
+			this.temporalState = states.PAST;
+			for (var i=0; i<this.listeners.length; i++) {
+				if (this.listeners[i].reset !== undefined) {
+					this.listeners[i].reset();
+				}
+			};
+		}
+	};
+
+	return ResetInstant;
 })();
