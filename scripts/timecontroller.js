@@ -86,16 +86,18 @@
 				handle: document.getElementById('handle'),
 			};
 
-			this.zeroTime = zeroTime || 0;			// units: milliseconds of sample time
-			this.endTime  = endTime  || 0;			// units: milliseconds of sample time
-
 			this.listeners = [];
 			this.intervalHandle = null;
 			this.sampleTimeSpeedup = null;
 			this.simulationTimeOffset = null;			
 
+			this.zeroTime = zeroTime || 0;			// units: milliseconds of sample time
+			this.endTime  = endTime  || 0;			// units: milliseconds of sample time
+
 			this.width = this.elements.rail.clientWidth;
+			this.halfIndicatorWidth = this.elements.indicator.clientWidth/2;
 			this.horizontalOffset = this.elements.rail.getBoundingClientRect().left;
+
 			this.sampleMillisecondsPerPixel = (this.endTime - this.zeroTime) / this.width;
 			this.simulationMillisecondsPerPixel = null;	// this can only be set once we know sampleTimeSpeedup.
 
@@ -108,26 +110,43 @@
 			};
 
 			this.elements.handle.addEventListener("mousedown", this.eventHandlers.onMouseDown, true);
-			this.elements.rail.addEventListener("click", this.eventHandlers.onMouseClick, true);
-
 			this.elements.rail.addEventListener("mousedown", function(){pauseEvent(event || window.event)}, true);
+			this.elements.rail.addEventListener("click", this.eventHandlers.onMouseClick, true);
 		}
 
-		ProgressBar.prototype.normalisePosition = function(position) {
-			return Math.max(0, Math.min(this.width, position));
-		};
+		//====================================//
 
-		ProgressBar.prototype.moveIndicatorTo = function(sampleTime) {
+		ProgressBar.prototype.setPosition = function(sampleTime) {
+			// Remember, this accepts position as a *time*, not a pixel offset.
 
 			var position = (sampleTime - this.zeroTime) / this.sampleMillisecondsPerPixel;
-			var normalisedPosition = this.normalisePosition(position);
-			this.elements.indicator.style.marginLeft = normalisedPosition;
+			var boundedPosition = Math.max(0, Math.min(this.width, position));
+			this.elements.indicator.style.marginLeft = boundedPosition - this.halfIndicatorWidth;
 		};
+
+		ProgressBar.prototype.getSampleTime = function(x) {
+			
+			var position = x - this.horizontalOffset;
+			var boundedPosition = Math.max(0, Math.min(this.width, position));
+			var sampleTime = boundedPosition * this.sampleMillisecondsPerPixel + this.zeroTime;
+
+			return sampleTime;
+		};
+
+		ProgressBar.prototype.followMouse = function(event) {
+			
+			pauseEvent(event || window.event);
+
+			var sampleTime = this.getSampleTime(event.x);
+			this.setPosition(sampleTime);
+
+			return sampleTime;
+		};
+
+		//====================================//
 
 		ProgressBar.prototype.onMouseDown = function(event) {
 			// enter 'scrubbing' mode
-
-			pauseEvent(event || window.event);
 
 			document.addEventListener('mousemove', this.eventHandlers.onMouseMove, false);
 			document.addEventListener('mouseup', this.eventHandlers.onMouseUp, true);
@@ -138,10 +157,8 @@
 			};
 		};
 
-		ProgressBar.prototype.onMouseUp = function() {
+		ProgressBar.prototype.onMouseUp = function(event) {
 			// exit scrubbing mode
-
-			pauseEvent(event || window.event);
 
 			document.removeEventListener('mousemove', this.eventHandlers.onMouseMove, false);
 			document.removeEventListener('mouseup', this.eventHandlers.onMouseUp, true);
@@ -154,13 +171,7 @@
 
 		ProgressBar.prototype.onMouseMove = function(event) {
 
-			pauseEvent(event || window.event);
-
-			var position = event.x - this.horizontalOffset
-			var normalisedPosition = this.normalisePosition(position);
-			var sampleTime = normalisedPosition * this.sampleMillisecondsPerPixel + this.zeroTime;
-
-			this.moveIndicatorTo(sampleTime);			
+			var sampleTime = this.followMouse(event);
 
 			// notify listener(s)
 			for (var i = 0; i < this.listeners.length; i++) {
@@ -170,13 +181,7 @@
 
 		ProgressBar.prototype.onMouseClick = function(event) {
 
-			pauseEvent(event || window.event);
-
-			var position = event.x - this.horizontalOffset
-			var normalisedPosition = this.normalisePosition(position);
-			var sampleTime = normalisedPosition * this.sampleMillisecondsPerPixel + this.zeroTime;
-
-			this.moveIndicatorTo(sampleTime);			
+			var sampleTime = this.followMouse(event);				
 
 			// notify listener(s)
 			for (var i = 0; i < this.listeners.length; i++) {
@@ -185,6 +190,8 @@
 				this.listeners[i].exitScrubbingMode();
 			};
 		};
+
+		//====================================//
 
 		ProgressBar.prototype.start = function(sampleTimeSpeedup, simulationTimeOffset) {
 
@@ -213,20 +220,20 @@
 			var simulationTime = Date.now() - this.simulationTimeOffset;						// units: milliseconds of simulation time
 			var sampleTime = simulationTime * this.sampleTimeSpeedup + this.zeroTime;			// units: milliseconds of sample time
 			
-			this.moveIndicatorTo(sampleTime);
+			this.setPosition(sampleTime);
 		};
+
+		//====================================//
 
 		ProgressBar.prototype.registerListener = function(listener) {
 			this.listeners.push(listener);
-		};
+		};		
 
-		ProgressBar.prototype.activate = function() {
-			// This method is called by any sampleInstants that ProgressBar subscribes to. In particular, it is called 
-			// by TimeController's stopInstant, which fires once the slider gets to the end of its rail.
+		ProgressBar.prototype.reset = function() {
+			// This method is called by TimeController's resetInstant, which fires once the slider gets to the end
+			// of its rail.
 
-			console.log('progressBar should now reset. Scrubbing');
-
-			this.moveIndicatorTo(this.zeroTime);
+			this.setPosition(this.zeroTime);
 
 			for (var i = 0; i < this.listeners.length; i++) {
 				this.listeners[i].enterScrubbingMode();
@@ -351,9 +358,13 @@
 			progressBar.registerListener(this);
 			this.registerListener(progressBar);
 
-			var stopInstant = new SampleInstant(this.endTime, this.zeroTime);	// the stop instant should fire when the slider gets to the end of its rail.
-			this.registerListener(stopInstant);
-			stopInstant.registerListener(progressBar);
+			var resetInstant = new ResetInstant(this.endTime, this.zeroTime);	// the reset instant should fire when the slider gets to the end of its rail.
+
+			console.log(resetInstant);
+
+			progressBar.resetInstant = resetInstant;
+			this.registerListener(resetInstant);
+			resetInstant.registerListener(progressBar);
 
 			playPauseButton.play();
 		};

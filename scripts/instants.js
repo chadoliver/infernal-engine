@@ -42,7 +42,7 @@ var SampleInstant = (function () {
 	};
 
 	SampleInstant.prototype.start = function(sampleTimeSpeedup, simulationTimeOffset) {
-		
+
 		this.pause();	// cancel any running timer.
 
 		var delay = this.getDelay(sampleTimeSpeedup, simulationTimeOffset);		// delay has units of milliseconds of wall time.
@@ -54,7 +54,7 @@ var SampleInstant = (function () {
 	};
 
 	SampleInstant.prototype.pause = function() {
-		
+
 		if (this.timeoutHandle !== null) {
 			window.clearTimeout(this.timeoutHandle);
 			this.timeoutHandle = null;
@@ -62,7 +62,7 @@ var SampleInstant = (function () {
 	};
 
 	SampleInstant.prototype.scrub = function(sampleTimeSpeedup, simulationTimeOffset) {
-		
+
 		var wasActive = (this.timeoutHandle !== null);
 		if (wasActive) {
 			this.pause();	// cancel the running timer.
@@ -157,6 +157,11 @@ var ResetInstant = (function () {
 					this.listeners[i].reset();
 				}
 			};
+		}
+		else if ((this.temporalState === states.PAST) && (delay > 0)) {
+			// The event just un-happened! This occurs when the clock is scrubbed to an earlier time.
+
+			this.temporalState = states.FUTURE;
 		}
 	};
 
