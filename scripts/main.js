@@ -1,6 +1,6 @@
 starter.wait(function () {
 
-    var map = new Map('SATELLITE', 11, new Location(-43.38, 171.22));
+    var map = new Map('SATELLITE', 13, new Location(-42.72994625445004, 171.6904809188843));
 
     //===========================================================================================================//
 
@@ -35,12 +35,12 @@ starter.wait(function () {
     personSet.putPerson(4, 'Norman');
 
     var actionSet = new ActionSet(timeController, personSet);
-    actionSet.putAction("The fire truck has arrived. Where do you want it?", new Location(-43.41, 171.33), 1, 22000);   // time is in milliseconds of sample time.
-    actionSet.putAction("We've only got a small 2m by 2m fire in the grass.", new Location(-43.43, 171.18), 2, 28000);
-    actionSet.putAction("The fire here is looking to jump over the road." , new Location(-43.38, 171.22), 3, 36000);
-    actionSet.putAction("Send the fire truck over to Russel.", new Location(-43.415, 171.34), 4, 48000);
-    actionSet.putAction(null, new Location(-43.42, 171.34), 4, 50000);
-    actionSet.putAction(null, new Location(-43.425, 171.34), 4, 52000);
+    actionSet.createAction("The fire truck has arrived. Where do you want it?", new Location(-43.41, 171.33), 1, 22000);   // time is in milliseconds of sample time.
+    actionSet.createAction("We've only got a small 2m by 2m fire in the grass.", new Location(-43.43, 171.18), 2, 28000);
+    actionSet.createAction("The fire here is looking to jump over the road." , new Location(-43.38, 171.22), 3, 36000);
+    actionSet.createAction("Send the fire truck over to Russel.", new Location(-43.415, 171.34), 4, 48000);
+    actionSet.createAction(null, new Location(-43.42, 171.34), 4, 50000);
+    actionSet.createAction(null, new Location(-43.425, 171.34), 4, 52000);
 
     timeController.begin();
 
