@@ -360,8 +360,6 @@
 
 			var resetInstant = new ResetInstant(this.endTime, this.zeroTime);	// the reset instant should fire when the slider gets to the end of its rail.
 
-			console.log(resetInstant);
-
 			progressBar.resetInstant = resetInstant;
 			this.registerListener(resetInstant);
 			resetInstant.registerListener(progressBar);

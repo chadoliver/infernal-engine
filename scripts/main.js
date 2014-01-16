@@ -42,7 +42,6 @@ starter.wait(function () {
     actionSet.putAction(null, new Location(-43.42, 171.34), 4, 50000);
     actionSet.putAction(null, new Location(-43.425, 171.34), 4, 52000);
 
-
     timeController.begin();
 
 
