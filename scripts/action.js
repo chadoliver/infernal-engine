@@ -1,29 +1,15 @@
 (function() {
 
 
-	var Message = (function () {
-		// This class is pretty empty at the moment, but the intention is to flesh it out later when I build the 
-		// people -> messageboard interface.
-
-		function Message (text) {
-			this.text = text;
-		};
-
-		return Message;
-
-	})();
-
-
 	//===========================================================================================================//
 
 
 	var Action = (function () {
 		
-		function Action (message, location, personId, sampleTime, timeController) {
+		function Action (message, location, sampleTime, timeController) {
 
 			this.message = message;
 			this.location = location;
-			this.personId = personId;
 			this.sampleTime = sampleTime;		// units: milliseconds of sample time
 
 			this.sampleInstant = new SampleInstant(this.sampleTime, timeController.zeroTime);		// both parameters have units of milliseconds of sample time
@@ -71,7 +57,7 @@
 
 
 	var ActionSet = (function() {
-		// a descriptive comment ...
+		// A simple wrapper class which automates some of the necessities.
 	
 		function ActionSet(timeController, personSet) {
 			
@@ -79,9 +65,11 @@
 			this.personSet = personSet;
 		}
 
-		ActionSet.prototype.putAction = function(message, location, personId, sampleTime) {
-			var action = new Action(message, location, personId, sampleTime, this.timeController);
-			this.personSet.registerAction(action);
+		ActionSet.prototype.createAction = function(message, location, personId, sampleTime) {
+
+			var action = new Action(message, location, sampleTime, this.timeController);
+			var person = this.personSet.getPersonById(personId);
+			person.registerAction(action);
 		};
 	
 		return ActionSet;
