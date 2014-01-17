@@ -101,48 +101,7 @@
 			this.updateOnAction(action);
 		};
 
-		Person.prototype.setLocationFromAction = function(action) {
-
-			if (action !== undefined) {
-				this.marker.showAt(action.location);
-				this.currentLocationSource = action;
-			} else {
-				this.marker.hide();
-				this.currentLocationSource = null;
-			}
-		};
-
-		Person.prototype.progressLocation = function(action) {
-
-			if (this.currentLocationSource === null || action.sampleTime > this.currentLocationSource.sampleTime) {
-				if (action.location !== undefined) {
-					this.setLocationFromAction(action);
-				}
-			} 
-			// else the action doesn't influence the current location, so we don't do anything.
-		};
-
-		Person.prototype.regressLocation = function(action) {
-
-			if (action === this.currentLocationSource) {
-
-				this.sortActions();	// ensure that the actions are sorted by sample time.
-
-				var i = this.actions.length
-				while (i--) {
-					if (this.actions[i].isActive) {
-						if (this.actions[i].location !== undefined) {
-							this.setLocationFromAction(this.actions[i]);
-							return;
-						}
-					}
-				}
-
-				// if we get this far, then there is no active action which specifies a location.
-				this.setLocationFromAction(undefined);
-			}
-			// else the action doesn't influence the current location, so we don't do anything.
-		};
+		
 
 		Person.prototype.publishMessage = function(action) {
 

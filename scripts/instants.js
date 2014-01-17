@@ -19,7 +19,8 @@ var SampleInstant = (function () {
 		this.zeroTime = zeroTime;		// this.zeroTime is the Sample Time of the earliest event.
 
 		this.timeoutHandle = null;
-		this.temporalState = states.FUTURE;
+		//this.temporalState = states.FUTURE;
+		this.isActive = false;
 		this.listeners = [];
 	}
 
@@ -86,26 +87,22 @@ var SampleInstant = (function () {
 		this.updateTemporalState(-1);	// any negative number would do here. 
 	}
 
-	SampleInstant.prototype.updateTemporalState = function(delay) {
-		
-		if ((this.temporalState === states.FUTURE) && (delay <= 0)) {
-			// Hey look, the event just happened! (Or at least, it has happened between now and whenever we
-			// last checked.)
-			
-			this.temporalState = states.PAST;
-			for (var i=0; i<this.listeners.length; i++) {
-				if (this.listeners[i].activate !== undefined) {
-					this.listeners[i].activate();
-				}
-			};
-		}
-		else if ((this.temporalState === states.PAST) && (delay > 0)) {
-			// The event just un-happened! This occurs when the clock is scrubbed to an earlier time.
+	SampleInstant.prototype.notifyListeners = function(delay) {
 
-			this.temporalState = states.FUTURE;
+		var transitionedToActive = (!this.isActive) && (delay <= 0);
+		var transitionedToNotActive = (this.isActive) && (delay > 0);
+
+		if (transitionedToActive) {
+			this.isActive = true;
+		}
+		else if (transitionedToNotActive) {
+			this.isActive = false;
+		}
+
+		if (transitionedToActive || transitionedToNotActive) {
 			for (var i=0; i<this.listeners.length; i++) {
-				if (this.listeners[i].deactivate !== undefined) {
-					this.listeners[i].deactivate();
+				if (this.listeners[i].updateOnInstant !== undefined) {
+					this.listeners[i].updateOnInstant(this);
 				}
 			};
 		}
@@ -121,49 +118,4 @@ var SampleInstant = (function () {
 	};
 
 	return SampleInstant;
-})();
-
-//Validator.call(this);
-
-var ResetInstant = (function () { 
-	// This class is used to represent a instant in Simulation Time. 
-
-	var states = {
-		PAST: 'past',
-		FUTURE: 'future',
-	};
-
-	function ResetInstant (sampleTime, zeroTime) {
-		
-		this.sampleTime = sampleTime;	// this.sampleTime is the cannonical source of simulation time and real time.
-		this.zeroTime = zeroTime;		// this.zeroTime is the Sample Time of the earliest event.
-
-		this.timeoutHandle = null;
-		this.temporalState = states.FUTURE;
-		this.listeners = [];
-	}
-
-	ResetInstant.prototype = new SampleInstant();
-
-	ResetInstant.prototype.updateTemporalState = function(delay) {
-		
-		if ((this.temporalState === states.FUTURE) && (delay <= 0)) {
-			// Hey look, the event just happened! (Or at least, it has happened between now and whenever we
-			// last checked.)
-			
-			this.temporalState = states.PAST;
-			for (var i=0; i<this.listeners.length; i++) {
-				if (this.listeners[i].reset !== undefined) {
-					this.listeners[i].reset();
-				}
-			};
-		}
-		else if ((this.temporalState === states.PAST) && (delay > 0)) {
-			// The event just un-happened! This occurs when the clock is scrubbed to an earlier time.
-
-			this.temporalState = states.FUTURE;
-		}
-	};
-
-	return ResetInstant;
 })();

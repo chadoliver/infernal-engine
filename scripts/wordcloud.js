@@ -436,11 +436,12 @@
 			}
 		};
 
+		WordCloud.prototype.updateOnMessage = function(message) {
+			console.log('wordcloud: received message');
+		};
+
 		return WordCloud;
 	})();
 
-	window['WordCloud'] = WordCloud; // <-- Constructor
-	window['WordCloud'].prototype['paint'] = WordCloud.prototype.paint;
-	window['WordCloud'].prototype['putWord'] = WordCloud.prototype.putWord;
-
+	window['WordCloud'] = WordCloud;
 })();

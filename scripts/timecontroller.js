@@ -220,6 +220,8 @@
 		ProgressBar.prototype.onMouseDown = function(event) {
 			// enter 'scrubbing' mode
 
+			pauseEvent(event || window.event);
+
 			document.addEventListener('mousemove', this.eventHandlers.onMouseMove, false);
 			document.addEventListener('mouseup', this.eventHandlers.onMouseUp, true);
 
@@ -301,17 +303,21 @@
 			this.listeners.push(listener);
 		};		
 
-		ProgressBar.prototype.reset = function() {
+		ProgressBar.prototype.updateOnInstant = function(instant) {
 			// This method is called by TimeController's resetInstant, which fires once the slider gets to the end
 			// of its rail.
 
-			this.setPosition(this.zeroTime);
+			if (instant.isActive) {
+				this.setPosition(this.zeroTime);
 
-			for (var i = 0; i < this.listeners.length; i++) {
-				this.listeners[i].enterScrubbingMode();
-				this.listeners[i].scrub(this.zeroTime);
-				this.listeners[i].exitScrubbingMode();
-			};
+				for (var i = 0; i < this.listeners.length; i++) {
+					this.listeners[i].enterScrubbingMode();
+					this.listeners[i].scrub(this.zeroTime);
+					this.listeners[i].exitScrubbingMode();
+				};
+			}
+			// once we get to this point, instant.isActive is guaranteed to be false (either because it always was, or
+			// because it was scrubbed it back to the start)
 		};
 	
 		return ProgressBar;
@@ -358,7 +364,7 @@
 			progressBar.registerListener(this);
 			this.registerListener(progressBar);
 
-			var resetInstant = new ResetInstant(this.endTime, this.zeroTime);	// the reset instant should fire when the slider gets to the end of its rail.
+			var resetInstant = new SampleInstant(this.endTime, this.zeroTime);	// the sample instant should fire when the slider gets to the end of its rail.
 
 			progressBar.resetInstant = resetInstant;
 			this.registerListener(resetInstant);
@@ -454,14 +460,6 @@
 		return TimeController;
 	})();
 
-
 	window['TimeController'] = TimeController; // <-- Constructor
-
-	window['TimeController'].prototype['start'] = TimeController.prototype.start;
-	window['TimeController'].prototype['pause'] = TimeController.prototype.pause;
-	window['TimeController'].prototype['scrub'] = TimeController.prototype.scrub;
-
-	window['TimeController'].prototype['subscribe'] = TimeController.prototype.subscribe;
-	window['TimeController'].prototype['getSimulationTime'] = TimeController.prototype.getSimulationTime;
 
 })();
