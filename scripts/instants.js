@@ -8,18 +8,12 @@ var inherit = function(childObj, parentClass) {
 var SampleInstant = (function () { 
 	// This class is used to represent a instant in Simulation Time. 
 
-	var states = {
-		PAST: 'past',
-		FUTURE: 'future',
-	};
-
 	function SampleInstant (sampleTime, zeroTime) {
 		
 		this.sampleTime = sampleTime;	// this.sampleTime is the cannonical source of simulation time and real time.
 		this.zeroTime = zeroTime;		// this.zeroTime is the Sample Time of the earliest event.
 
 		this.timeoutHandle = null;
-		//this.temporalState = states.FUTURE;
 		this.isActive = false;
 		this.listeners = [];
 	}
@@ -47,7 +41,7 @@ var SampleInstant = (function () {
 		this.pause();	// cancel any running timer.
 
 		var delay = this.getDelay(sampleTimeSpeedup, simulationTimeOffset);		// delay has units of milliseconds of wall time.
-		this.updateTemporalState(delay);
+		this.notifyListeners(delay);
 
 		if (delay > 0) {	// it's no use setting a timeout if the event happens in the past.
 			this.timeoutHandle = window.setTimeout(this.onCountdownFires.bind(this), delay);
@@ -70,7 +64,7 @@ var SampleInstant = (function () {
 		}
 		
 		var delay = this.getDelay(sampleTimeSpeedup, simulationTimeOffset);		// delay has units of milliseconds of wall time.
-		this.updateTemporalState(delay);
+		this.notifyListeners(delay);
 
 		if (wasActive && (delay > 0)) {	// it's no use setting a timeout if the event happens in the past.
 			this.timeoutHandle = window.setTimeout(this.onCountdownFires.bind(this), delay);
@@ -84,22 +78,22 @@ var SampleInstant = (function () {
 	SampleInstant.prototype.onCountdownFires = function() {
 
 		this.timeoutHandle = null;
-		this.updateTemporalState(-1);	// any negative number would do here. 
+		this.notifyListeners(-1);	// any negative number would do here. 
 	}
 
 	SampleInstant.prototype.notifyListeners = function(delay) {
 
 		var transitionedToActive = (!this.isActive) && (delay <= 0);
-		var transitionedToNotActive = (this.isActive) && (delay > 0);
+		var transitionedToInactive = (this.isActive) && (delay > 0);
 
 		if (transitionedToActive) {
 			this.isActive = true;
 		}
-		else if (transitionedToNotActive) {
+		else if (transitionedToInactive) {
 			this.isActive = false;
 		}
 
-		if (transitionedToActive || transitionedToNotActive) {
+		if (transitionedToActive || transitionedToInactive) {
 			for (var i=0; i<this.listeners.length; i++) {
 				if (this.listeners[i].updateOnInstant !== undefined) {
 					this.listeners[i].updateOnInstant(this);

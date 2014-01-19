@@ -38,14 +38,85 @@
 	//===========================================================================================================//
 
 
+	var Message = (function() {
+		// a descriptive comment ...
+
+		function UUID () {
+			return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+			    var r = Math.random()*16|0, v = c == 'x' ? r : (r&0x3|0x8);
+			    return v.toString(16);
+			});
+		};
+	
+		function Message(text, name) {
+			
+			this.text = text;
+			this.id = UUID();
+			this.name = name;
+
+			this.isActive = false;
+			this.listeners = [];
+			this.sampleTime = null;
+			this.dependencies = {
+				marker: null,
+				instant: null,
+			};
+		}
+
+		Message.prototype.updateOnInstant = function(instant) {
+			this.dependencies.instant = instant;
+			this.sampleTime = instant.sampleTime;
+			this.notifyListeners();
+		};
+	
+		Message.prototype.updateOnMarker = function(marker) {
+			this.dependencies.marker = marker;
+			this.notifyListeners();
+		};
+
+		Message.prototype.notifyListeners = function() {
+
+			var instantIsActive = false;	// initially, all instants are in the future.
+			var markerIsActive = true;		// initially, all markers are active.
+
+			if (this.dependencies.instant !== null) {
+				instantIsActive = this.dependencies.instant.isActive;
+			}
+			if (this.dependencies.marker !== null) {
+				markerIsActive = this.dependencies.marker.isActive;
+			}
+			
+			var newState = instantIsActive && markerIsActive;
+
+			if (newState !== this.isActive) {
+				this.isActive = newState;
+
+				for (var i=0; i<this.listeners.length; i++) {
+					this.listeners[i].updateOnMessage(this);
+				}
+			}
+		};
+
+		Message.prototype.registerListener = function(listener) {
+			this.listeners.push(listener);
+		};
+
+		return Message;
+	})();
+
+
+	//===========================================================================================================//
+
+
 	var Marker = (function() {
 		// a descriptive comment ...
 
-		function Marker(id, map) {
+		function Marker(id, name, map) {
 			// Marker represents a pointer thingy on the map. In our case, it is a visual representation of a person's
 			// location at a given time.
 
 			this.id = id;
+			this.name = name;
 			this.map = map;
 			this.marker = null;		// an instance of google.maps.Marker();
 
@@ -56,22 +127,9 @@
 			this.currentLocation = null;
 		}
 
-		Marker.prototype.hide = function() {
-			// What we're really doing is deleting the marker (not just hiding it). This is perhaps overkill, but it makes 
-			// it a little easier to manage markers.
-
-			if (this.marker !== null) {
-				this.marker.setMap(null);
-				this.marker = null;
-			}
-		};
-
 		Marker.prototype.showAt = function(location) {
 			
-			if (location === null) {
-				this.hide();								// remove the marker.
-			}
-			else if (location !== undefined) {					// if location is actually an instance of Location:
+			if (location !== undefined) {				// if location is actually an instance of Location:
 
 				this.currentLocation = location;
 
@@ -79,7 +137,7 @@
 					this.marker = new google.maps.Marker({	// the marker doesn't exist, so we create it
 					    position: location.toGoogle(),
 					    map: this.map.map,					// this.map is an instance of Map(), while this.map.map is an instance of google.maps.Map().
-					    title: this.person.name
+					    title: this.id.toString()
 					});
 				}
 				else {
@@ -90,9 +148,12 @@
 
 		Marker.prototype.progressLocation = function(location) {
 
-			if (this.currentLocation === null || (location.sampleTime > this.currentLocation.sampleTime)) {
+			if (this.currentLocation === null) {
 				this.showAt(location);
 			} 
+			else if (location.sampleTime > this.currentLocation.sampleTime) {
+				this.showAt(location);
+			}
 			// else the action doesn't influence the current location, so we don't do anything.
 		};
 
@@ -115,8 +176,12 @@
 					}
 				}
 
-				// if we get this far, then there is no active action which specifies a location.
-				this.showAt(null);
+				// if we get this far, then there is no active action which specifies a location. Therefore, hide the marker.
+				if (this.marker !== null) {
+					this.marker.setMap(null);
+					this.marker = null;
+					this.currentLocation = null;
+				}
 			}
 			// else the action doesn't influence the current location, so we don't do anything.
 		};
@@ -127,7 +192,7 @@
 				this.locationHistory.push(location);
 				this.progressLocation(location);
 			} 
-			else {
+			else {	// location has just become 'inactive'.
 				var index = this.locationHistory.indexOf(location);
 				if (index >= 0) {
 					this.locationHistory.splice(index, 1);
@@ -154,66 +219,6 @@
 	//===========================================================================================================//
 
 
-	var Message = (function() {
-		// a descriptive comment ...
-
-		function UUID () {
-			return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-			    var r = Math.random()*16|0, v = c == 'x' ? r : (r&0x3|0x8);
-			    return v.toString(16);
-			});
-		};
-	
-		function Message(text, name) {
-			
-			this.text = text;
-			this.id = new UUID();
-			this.name = name;
-
-			this.isActive = false;
-			this.listeners = [];
-			this.sampleTime = null;
-			this.dependencies = {
-				marker: null,
-				instant: null,
-			};
-		}
-
-		Message.prototype.updateOnInstant = function(instant) {
-			this.dependencies.instant = instant;
-			this.sampleTime = instant.sampleTime;
-			this.notifyListeners();
-		};
-	
-		Message.prototype.updateOnMarker = function(marker) {
-			this.dependencies.marker = marker;
-			this.notifyListeners();
-		};
-
-		Message.prototype.notifyListeners = function() {
-			
-			var newState = this.dependencies.instant.isActive && this.dependencies.marker.isActive;
-
-			if (newState !== this.isActive) {
-				this.isActive = newState;
-
-				for (var i=0; i<this.listeners.length; i++) {
-					this.listeners[i].updateOnMessage(this);
-				}
-			}
-		};
-
-		Message.prototype.registerListener = function(listener) {
-			this.listeners.push(listener);
-		};
-
-		return Message;
-	})();
-
-
-	//===========================================================================================================//
-
-
 	var MarkerSet = (function() {
 
 		function MarkerSet (map) {
@@ -224,11 +229,11 @@
 
 		MarkerSet.prototype.createMarker = function(id, name) {
 
-			var marker = new Marker(id, this.map);
+			var marker = new Marker(id, name, this.map);
 			this.markers.push(marker);
 		};
 
-		MarkerSet.prototype.getMarkerById = function(markerId) {
+		MarkerSet.prototype.getMarkerById = function(id) {
 			
 			for (var i=0; i<this.markers.length; i++) {
 				var marker = this.markers[i];
@@ -262,20 +267,24 @@
 
 		DataModel.prototype.createAction = function(text, coordinates, markerId, sampleTime) {
 
-			var sampleInstant = new SampleInstant(this.sampleTime, this.timeController.zeroTime);
-			var location = new Location(coordinates[0], coordinates[1]);
+			var sampleInstant = new SampleInstant(sampleTime, this.timeController.zeroTime);
 			var marker = this.markerSet.getMarkerById(markerId);
-			var message = new Message(text, marker.name);
 
 			this.timeController.registerListener(sampleInstant);
-			sampleInstant.registerListener(location);
-			sampleInstant.registerListener(message);
 
-			location.registerListener(marker);
-			marker.registerListener(message);
-
-			message.registerListener(this.messageBoard);
-			message.registerListener(this.wordCloud);
+			if (coordinates !== null) {
+				var location = new Location(coordinates[0], coordinates[1]);
+				sampleInstant.registerListener(location);
+				location.registerListener(marker);
+			}
+			
+			if (text !== null) {
+				var message = new Message(text, marker.name);
+				sampleInstant.registerListener(message);
+				marker.registerListener(message);
+				message.registerListener(this.messageBoard);
+				message.registerListener(this.wordCloud);
+			}			
 		};
 	
 		return DataModel;

@@ -3,18 +3,18 @@
 	var Map = (function() {
 		// a descriptive comment ...
 	
-		function Map(styleName, zoom, coordinates) {
+		function Map(id, styleName, zoom, coordinates) {
 
+			var element = document.getElementById(id);
 			styleName = styleName || 'SATELLITE';
 			zoom = zoom || 11;
-			coordinates = coordinates || [-43.38, 171.22];
 
-			this.map = new google.maps.Map(document.getElementById('map'), {
-			    center: google.maps.LatLng(coordinates[0], coordinates[1]),
+			this.map = new google.maps.Map(element, {
+			    center: new google.maps.LatLng(-43.38, 171.22, false),
 			    zoom: zoom,
 			    mapTypeId: google.maps.MapTypeId[styleName],
 			    disableDefaultUI: true,
-			    rotateControl: true,
+			    rotateControl: true
 			});
 		}
 
@@ -26,7 +26,7 @@
 
 		Map.prototype.printPosition = function() {
 			
-			var center = this.map.getCenter()
+			var center = this.map.getCenter();
 			console.log('location:', center.toString());
 			console.log('zoom:', this.map.getZoom());
 		};
@@ -42,6 +42,5 @@
 	// outside world.
 
 	
-	window['Map'] = Map; // <-- Constructor
-
+	window['Map'] = Map;
 })();

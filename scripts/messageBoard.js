@@ -20,10 +20,10 @@
 			wrapperElement.id = message.id;
 			
 			contentElement.className = 'messageContent';
-			contentElement.innerHTML = message.name + ": " + message;
+			contentElement.innerHTML = message.name + ": " + message.text;
 
 			wrapperElement.appendChild(contentElement);
-			this.rootElement.appendChild(wrapperElement);
+			this.root.appendChild(wrapperElement);
 		};
 
 		MessageBoard.prototype.retractMessage = function(message) {
@@ -37,10 +37,10 @@
 		MessageBoard.prototype.updateOnMessage = function(message) {
 
 			if (message.isActive) {
-				this.publishMessage(action);
+				this.publishMessage(message);
 			} 
 			else {
-				this.retractMessage(action);
+				this.retractMessage(message);
 			}
 		};
 
