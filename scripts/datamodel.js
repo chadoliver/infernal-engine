@@ -139,7 +139,7 @@
 					    map: this.map.map,					// this.map is an instance of Map(), while this.map.map is an instance of google.maps.Map().
 					    title: this.id.toString(),
 					    clickable: true,
-					    icon: 'img/green.png'
+					    icon: this.isActive ? 'img/green.png' : 'img/red.png'
 					});
 					google.maps.event.addListener(this.marker, 'click', this.onClick.bind(this));
 				}
