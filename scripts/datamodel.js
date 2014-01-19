@@ -137,8 +137,11 @@
 					this.marker = new google.maps.Marker({	// the marker doesn't exist, so we create it
 					    position: location.toGoogle(),
 					    map: this.map.map,					// this.map is an instance of Map(), while this.map.map is an instance of google.maps.Map().
-					    title: this.id.toString()
+					    title: this.id.toString(),
+					    clickable: true,
+					    icon: 'img/green.png'
 					});
+					google.maps.event.addListener(this.marker, 'click', this.onClick.bind(this));
 				}
 				else {
 					this.marker.setPosition(location.toGoogle());	// the marker exists, so we just need to change its position.
@@ -202,7 +205,15 @@
 		};
 
 		Marker.prototype.onClick = function(event) {
+			
 			this.isActive = !this.isActive;
+
+			if (this.isActive) {
+				this.marker.setIcon('img/green.png');
+			} else {
+				this.marker.setIcon('img/red.png');
+			}
+
 			for (var i=0; i<this.listeners.length; i++) {
 				this.listeners[i].updateOnMarker(this);
 			}
