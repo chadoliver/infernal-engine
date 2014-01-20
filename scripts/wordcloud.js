@@ -102,7 +102,7 @@
 
 		Image.prototype.getCoordinates = function(whitePixels) {
 
-			coordinates = [];
+			var coordinates = new Array(this.height*this.width);
 
 			for (var y = 0; y < this.height; y++) {
 				for (var x = 0; x < this.width; x++) {
@@ -110,10 +110,10 @@
 						var pixelIndex = constants.NUM_CHANNELS * (y * this.width + x);
 						var alpha = this.data[pixelIndex + constants.ALPHA_CHANNEL];
 						if (alpha > 0) {
-							coordinates.push(new Coordinate(x, y));
+							coordinates[y*this.width+x] = new Coordinate(x, y);
 						}
 					} else {
-						coordinates.push(new Coordinate(x, y));
+						coordinates[y*this.width+x] = new Coordinate(x, y);
 					}
 				}
 			}
@@ -201,8 +201,11 @@
 			this.height = height;
 
 			this.canvas = new Canvas(width, height);
+
 			if (id !== undefined) {
 				this.canvas.attach(id);
+			} else {
+				this.indexArray = this.getIndexArray(width, height);
 			}
 
 			this.image = this.readImage();
@@ -235,11 +238,13 @@
 
 			for (var i = 0; i < subjectCoordinates.length; i++) {
 
-				var coordinate = subjectCoordinates[i].sum(offset);
-				var pixel = this.readPixel(coordinate);
+				if (subjectCoordinates[i] !== undefined) {
+					var coordinate = subjectCoordinates[i].sum(offset);
+					var pixel = this.readPixel(coordinate);
 
-				if (pixel !== 0) {
-					return true;
+					if (pixel !== 0) {
+						return true;
+					}
 				}
 			}
 
@@ -248,23 +253,62 @@
 		};
 
 		Background.prototype.getCoordinates = function() {
-			// Return a list of all coordinates (effectively, pixels) in the image. The list is ordered by closeness to the center, 
-			// with a small bias to favour pixels closer to the vertical middle of the image.
+			// Return a list of all coordinates (effectively, pixels) in the image. This.indexArray may be used to 
+			// access them in order of closeness to the center of the image.
 
-			coordinates = this.image.getCoordinates(constants.whitePixels.INCLUDE);
+			return this.image.getCoordinates(constants.whitePixels.INCLUDE);
+		};
 
-			// sort the coordinates by closeness to the center
-			var center = new Coordinate(this.width / 2, this.height / 2);
-			coordinates.sort(function compare(a, b) {
-				var distanceA = a.distance(center);
-				var distanceB = b.distance(center);
+		Background.prototype.getIndexArray = function(width, height) {
+			// the index array is a list of indices used as a substitute for sorting the coordinates returned 
+			// by this.image.getCoordinates(). So, if we have:
+			//
+			// 		var coordinates = background.getCoordinates();
+			//		var indexArray = background.getIndexArray();
+			//
+			// Then to access the coordinates as if they were sorted by distance from the center of the 
+			// wordcloud, use:
+			//
+			// 		for (var i=0, i<indexArray.length; i++) {
+			//			var coordinate = coordinates[indexArray[i]];
+			//		}
 
-				if (distanceA < distanceB) return -1;
-				if (distanceA > distanceB) return 1;
+			var startTime = Date.now();
+
+			var draftArray = new Array(height*width);	// used to preserve temporary values through the sorting process
+			var indexArray = new Array(height*width);
+
+			var center =  {
+				x: width/2,
+				y: height/2
+			};
+
+			for (var y = 0; y < height; y++) {
+				for (var x = 0; x < width; x++) {
+
+					var deltaX = (x - center.x) * constants.HORIZONTAL_SCALING_FACTOR;
+					var deltaY = (y - center.y) * constants.VERTICAL_SCALING_FACTOR;
+					var distanceToCenter = Math.sqrt(deltaX*deltaX + deltaY*deltaY);
+
+					var indexFromTopLeft = y*this.width+x;
+
+					draftArray[indexFromTopLeft] = [distanceToCenter, indexFromTopLeft];
+				}
+			}
+
+			draftArray.sort(function compare(a, b) {
+				if (a[0] < b[0]) return -1;
+				if (a[0] > b[0]) return 1;
 				else return 0;
 			});
 
-			return coordinates;
+			for (var i=0; i<(height*width); i++) {
+				indexArray[i] = draftArray[i][1];
+			}
+
+			console.log('time to generate indexArray :', (Date.now()-startTime)/1000);
+
+			return indexArray;
 		};
 
 		return Background;
@@ -278,6 +322,7 @@
 
 		/** @constructor */
 		function BoundingBox(image) {
+
 			this.start = new Coordinate(Infinity, Infinity);
 			this.end = new Coordinate(-Infinity, -Infinity);
 
@@ -320,7 +365,6 @@
 			return canvas.readImage(bbox);
 		};
 
-		/** @constructor */
 		function Word(text, frequency, fontWeight, fontName) {
 			var self = this;
 
@@ -330,10 +374,15 @@
 			this.fontName = fontName;
 		}
 
-		/** @private */
+		Word.prototype.setFrequency = function(frequency) {
+			// body...
+		};
+
 		Word.prototype.findPosition = function(background) {
 
 			var position = null;
+
+			var startTime = Date.now();
 
 			var canvas = new Canvas(600, 200);
 			canvas.writeText(this.text, this.size, false, this.fontWeight, this.fontName);
@@ -350,7 +399,7 @@
 			// the *most central* non-intersecting position.
 			var len = candidatePositions.length;
 			for (var i = 0; i < len; i++) {
-				var candidate = candidatePositions[i];
+				var candidate = candidatePositions[background.indexArray[i]];
 
 				var x = Math.floor(candidate.x - image.width / 2);
 				var y = Math.floor(candidate.y - image.height / 2);
@@ -405,14 +454,10 @@
 			var width = 350;
 			var height = 250;
 
-			/** @private */
 			this.fontweight = fontweight;
-			/** @private */
 			this.fontname = fontname;
 
-			/** @private */
 			this.draftBackground = new Background(width, height, undefined);
-			/** @private */
 			this.finalBackground = new Background(width, height, 'wordcloud');
 
 			this.words = [];
@@ -437,7 +482,7 @@
 		};
 
 		WordCloud.prototype.updateOnMessage = function(message) {
-			console.log('wordcloud: received message');
+			//console.log('wordcloud: received message');
 		};
 
 		return WordCloud;
