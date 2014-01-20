@@ -275,7 +275,7 @@
 			this.simulationTimeOffset = simulationTimeOffset;
 
 			this.simulationMillisecondsPerPixel = this.sampleMillisecondsPerPixel / sampleTimeSpeedup;
-			var tickInterval = Math.max(50, this.simulationMillisecondsPerPixel);
+			var tickInterval = Math.max(10, this.simulationMillisecondsPerPixel);
 
 			this.onTick();
 			this.intervalHandle = setInterval(this.eventHandlers.onTick, tickInterval);
