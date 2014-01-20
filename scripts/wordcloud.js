@@ -237,7 +237,7 @@
 
 		Background.prototype.intersection = function(subjectCoordinates, offset) {
 
-			for (var i = 0; i < subjectCoordinates.length; i++) {
+			for (var i = 0; i < subjectCoordinates.length; i=i+3) {
 
 				if (subjectCoordinates[i] !== undefined) {
 					var coordinate = subjectCoordinates[i].sum(offset);
@@ -469,8 +469,8 @@
 			this.fontweight = fontweight;
 			this.fontname = fontname;
 
-			this.draftBackground = new Background(width, height, 'wordcloud', true);
-			this.finalBackground = new Background(width, height, undefined, false);
+			this.draftBackground = new Background(width, height, undefined, true);
+			this.finalBackground = new Background(width, height, 'wordcloud', false);
 
 			this.words = [];
 		}
