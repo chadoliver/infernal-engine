@@ -307,8 +307,6 @@
 				indexArray[i] = draftArray[i][1];
 			}
 
-			console.log('time to generate indexArray :', (Date.now()-startTime)/1000);
-
 			return indexArray;
 		};
 
@@ -321,16 +319,20 @@
 
 	var BoundingBox = (function() {
 
+		totalTime = 0;
+
 		/** @constructor */
 		function BoundingBox(image) {
 
 			// This function is almost always the largest part of Word.getImage();
 
+			var startTime = Date.now();
+
 			this.start = new Coordinate(Infinity, Infinity);
 			this.end = new Coordinate(-Infinity, -Infinity);
 
-			for (var y = 0; y < image.height; y++) {
-				for (var x = 0; x < image.width; x++) {
+			for (var y = 0; y < image.height; y+=2) {
+				for (var x = 0; x < image.width; x+=2) {
 					var alpha = image.getPixel(new Coordinate(x, y));
 
 					if (alpha > 0) {
@@ -344,6 +346,9 @@
 
 			this.width = this.end.x - this.start.x;
 			this.height = this.end.y - this.start.y;
+
+			totalTime += Date.now()-startTime;
+			console.log('total bbox time :', totalTime);
 		}
 
 		BoundingBox.prototype.paint = function(canvas, color) {
@@ -367,24 +372,26 @@
 			this.size = constants.TEXT_SIZE_CONSTANT + constants.TEXT_SIZE_MULTIPLIER * frequency;
 			this.fontWeight = fontWeight;
 			this.fontName = fontName;
+
+			this.image = undefined;
+			this.bbox = undefined;
+			this.generateImage();
 		}
 
-		Word.prototype.getImage = function() {
+		Word.prototype.generateImage = function() {
+			// This function should be called every time the word's frequency changes.
 
 			var canvas = new Canvas(600, 200);
 			canvas.writeText(this.text, this.size, false, this.fontWeight, this.fontName);
 			var fullImage = canvas.readImage();
 			
 			this.bbox = new BoundingBox(fullImage);
-
-			return canvas.readImage(this.bbox);
+			this.image = canvas.readImage(this.bbox);
 		};
 
 		Word.prototype.findPosition = function(background) {
 
-			var image = this.getImage();
-
-			var componentCoordinates = image.getCoordinates(constants.whitePixels.EXCLUDE); // this is a list of all coordinates for black pixels in this.image
+			var componentCoordinates = this.image.getCoordinates(constants.whitePixels.EXCLUDE); // this is a list of all coordinates for black pixels in this.image
 			var candidatePositions = background.getCoordinates(); // this is a list of all coordinates for pixels in background.image, ordered by distance from the center.
 			var indexArray = background.indexArray;
 
@@ -397,8 +404,8 @@
 			for (var i = 0; i < len; i=i+3) {
 				var candidate = candidatePositions[indexArray[i]];
 
-				var x = Math.floor(candidate.x - image.width / 2);
-				var y = Math.floor(candidate.y - image.height / 2);
+				var x = Math.floor(candidate.x - this.image.width / 2);
+				var y = Math.floor(candidate.y - this.image.height / 2);
 				var topLeft = new Coordinate(x, y);
 
 				if (!background.intersection(componentCoordinates, topLeft)) {
