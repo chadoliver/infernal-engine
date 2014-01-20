@@ -196,7 +196,7 @@
 	var Background = (function() {
 
 		/** @constructor */
-		function Background(width, height, id) {
+		function Background(width, height, id, generateIndexArray) {
 			this.width = width;
 			this.height = height;
 
@@ -204,7 +204,8 @@
 
 			if (id !== undefined) {
 				this.canvas.attach(id);
-			} else {
+			}
+			if (generateIndexArray) {
 				this.indexArray = this.getIndexArray(width, height);
 			}
 
@@ -380,8 +381,6 @@
 
 		Word.prototype.findPosition = function(background) {
 
-			var position = null;
-
 			var startTime = Date.now();
 
 			var canvas = new Canvas(600, 200);
@@ -390,16 +389,24 @@
 			var bbox = new BoundingBox(fullImage);
 			var image = canvas.readImage(bbox);
 
+			console.log(this.text, 'setup:', Date.now()-startTime);
+			var continueTime = Date.now();
+
 			var componentCoordinates = image.getCoordinates(constants.whitePixels.EXCLUDE); // this is a list of all coordinates for black pixels in this.image
 			var candidatePositions = background.getCoordinates(); // this is a list of all coordinates for pixels in background.image, ordered by distance from the center.
+			var indexArray = background.indexArray;
+
+			console.log(this.text, 'get coordinates:', Date.now()-continueTime);
+			var continueTime = Date.now();
 
 			// Iterate through all possible positions where the word could be placed, and return the first position 
 			// which doesn't cause the word to intersect with any other words. Note that the possible positions are
 			// ordered by distance to the center (closest first) so the *first* non-intersecting position will also be 
 			// the *most central* non-intersecting position.
+			var position = null;
 			var len = candidatePositions.length;
-			for (var i = 0; i < len; i++) {
-				var candidate = candidatePositions[background.indexArray[i]];
+			for (var i = 0; i < len; i=i+3) {
+				var candidate = candidatePositions[indexArray[i]];
 
 				var x = Math.floor(candidate.x - image.width / 2);
 				var y = Math.floor(candidate.y - image.height / 2);
@@ -418,6 +425,9 @@
 				var position = new Coordinate(x, y);
 			}
 
+			console.log(this.text, 'find position:', Date.now()-continueTime);
+			var continueTime = Date.now();
+
 			return {
 				wordCenter: position,
 				boundingBox: bbox
@@ -435,8 +445,10 @@
 				y: wordCenter.y - boundingBox.height / 2 - boundingBox.start.y
 			};
 
+			var continueTime = Date.now();
 			draftBackground.writeText(this.text, this.size, true, this.fontWeight, this.fontName, position);
 			finalBackground.writeText(this.text, this.size, false, this.fontWeight, this.fontName, position);
+			console.log(this.text, 'write text:', Date.now()-continueTime);
 		};
 
 		return Word;
@@ -457,8 +469,8 @@
 			this.fontweight = fontweight;
 			this.fontname = fontname;
 
-			this.draftBackground = new Background(width, height, undefined);
-			this.finalBackground = new Background(width, height, 'wordcloud');
+			this.draftBackground = new Background(width, height, 'wordcloud', true);
+			this.finalBackground = new Background(width, height, undefined, false);
 
 			this.words = [];
 		}
@@ -479,6 +491,8 @@
 				var word = this.words[i];
 				word.paint(this.draftBackground, this.finalBackground);
 			}
+
+
 		};
 
 		WordCloud.prototype.updateOnMessage = function(message) {
