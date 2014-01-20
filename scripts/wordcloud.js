@@ -324,6 +324,8 @@
 		/** @constructor */
 		function BoundingBox(image) {
 
+			// This function is almost always the largest part of Word.getImage();
+
 			this.start = new Coordinate(Infinity, Infinity);
 			this.end = new Coordinate(-Infinity, -Infinity);
 
@@ -358,14 +360,6 @@
 
 	var Word = (function() {
 
-		var getImage = function(text, size, isBlurred, fontWeight, fontName) {
-			var canvas = new Canvas(600, 200);
-			canvas.writeText(text, size, isBlurred, fontWeight, fontName);
-			var fullImage = canvas.readImage();
-			var bbox = new BoundingBox(fullImage);
-			return canvas.readImage(bbox);
-		};
-
 		function Word(text, frequency, fontWeight, fontName) {
 			var self = this;
 
@@ -375,29 +369,24 @@
 			this.fontName = fontName;
 		}
 
-		Word.prototype.setFrequency = function(frequency) {
-			// body...
-		};
-
-		Word.prototype.findPosition = function(background) {
-
-			var startTime = Date.now();
+		Word.prototype.getImage = function() {
 
 			var canvas = new Canvas(600, 200);
 			canvas.writeText(this.text, this.size, false, this.fontWeight, this.fontName);
 			var fullImage = canvas.readImage();
-			var bbox = new BoundingBox(fullImage);
-			var image = canvas.readImage(bbox);
+			
+			this.bbox = new BoundingBox(fullImage);
 
-			console.log(this.text, 'setup:', Date.now()-startTime);
-			var continueTime = Date.now();
+			return canvas.readImage(this.bbox);
+		};
+
+		Word.prototype.findPosition = function(background) {
+
+			var image = this.getImage();
 
 			var componentCoordinates = image.getCoordinates(constants.whitePixels.EXCLUDE); // this is a list of all coordinates for black pixels in this.image
 			var candidatePositions = background.getCoordinates(); // this is a list of all coordinates for pixels in background.image, ordered by distance from the center.
 			var indexArray = background.indexArray;
-
-			console.log(this.text, 'get coordinates:', Date.now()-continueTime);
-			var continueTime = Date.now();
 
 			// Iterate through all possible positions where the word could be placed, and return the first position 
 			// which doesn't cause the word to intersect with any other words. Note that the possible positions are
@@ -425,12 +414,9 @@
 				var position = new Coordinate(x, y);
 			}
 
-			console.log(this.text, 'find position:', Date.now()-continueTime);
-			var continueTime = Date.now();
-
 			return {
 				wordCenter: position,
-				boundingBox: bbox
+				boundingBox: this.bbox
 			};
 		};
 
@@ -445,10 +431,8 @@
 				y: wordCenter.y - boundingBox.height / 2 - boundingBox.start.y
 			};
 
-			var continueTime = Date.now();
 			draftBackground.writeText(this.text, this.size, true, this.fontWeight, this.fontName, position);
 			finalBackground.writeText(this.text, this.size, false, this.fontWeight, this.fontName, position);
-			console.log(this.text, 'write text:', Date.now()-continueTime);
 		};
 
 		return Word;
