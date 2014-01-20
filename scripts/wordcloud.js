@@ -92,35 +92,28 @@
 			this.height = imageData.height;
 		}
 
-		Image.prototype.getPixel = function(x, y) {
+		Image.prototype.getPixel = function(coordinate) {
 			// we only return the alpha value, on the assumption that all colored pixels must have a
 			// non-zero alpha value.
-			var pixelIndex = constants.NUM_CHANNELS * (y*this.width + x);
+			var pixelIndex = constants.NUM_CHANNELS * (coordinate.y * this.width + coordinate.x);
 			var alpha = this.data[pixelIndex + constants.ALPHA_CHANNEL];
 			return alpha;
 		};
 
 		Image.prototype.getCoordinates = function(whitePixels) {
 
-			var coordinates = new Array(2*this.height*this.width);	// 2*..., because each pixel is represented by two elements (x and y)
+			var coordinates = new Array(this.height*this.width);
 
 			for (var y = 0; y < this.height; y++) {
 				for (var x = 0; x < this.width; x++) {
-
-					var pixelIndex = y*this.width + x;
-
-					if (whitePixels === constants.whitePixels.EXCLUDE) {
-
-						var alpha = this.data[constants.NUM_CHANNELS*pixelIndex + constants.ALPHA_CHANNEL];
-
+					if (whitePixels == constants.whitePixels.EXCLUDE) {
+						var pixelIndex = constants.NUM_CHANNELS * (y * this.width + x);
+						var alpha = this.data[pixelIndex + constants.ALPHA_CHANNEL];
 						if (alpha > 0) {
-							coordinates[2*pixelIndex] = x;
-							coordinates[2*pixelIndex+1] = y;
+							coordinates[y*this.width+x] = new Coordinate(x, y);
 						}
-
 					} else {
-						coordinates[2*pixelIndex] = x;
-						coordinates[2*pixelIndex+1] = y;
+						coordinates[y*this.width+x] = new Coordinate(x, y);
 					}
 				}
 			}
@@ -223,8 +216,8 @@
 			return this.canvas.readImage();
 		};
 
-		Background.prototype.readPixel = function(x, y) {
-			return this.image.getPixel(x, y);
+		Background.prototype.readPixel = function(position) {
+			return this.image.getPixel(position);
 		};
 
 		Background.prototype.writeImage = function(image, position) {
@@ -242,14 +235,13 @@
 			this.canvas.clear();
 		};
 
-		Background.prototype.intersection = function(subjectCoordinates, offsetX, offsetY) {
+		Background.prototype.intersection = function(subjectCoordinates, offset) {
 
 			for (var i = 0; i < subjectCoordinates.length; i=i+3) {
 
 				if (subjectCoordinates[i] !== undefined) {
-					var x = subjectCoordinates[i][0] + offsetX;
-					var y = subjectCoordinates[i][1] + offsetY;
-					var pixel = this.readPixel(x, y);
+					var coordinate = subjectCoordinates[i].sum(offset);
+					var pixel = this.readPixel(coordinate);
 
 					if (pixel !== 0) {
 						return true;
@@ -339,7 +331,7 @@
 
 			for (var y = 0; y < image.height; y++) {
 				for (var x = 0; x < image.width; x++) {
-					var alpha = image.getPixel(x, y);
+					var alpha = image.getPixel(new Coordinate(x, y));
 
 					if (alpha > 0) {
 						this.start.x = Math.min(this.start.x, x);
@@ -392,9 +384,8 @@
 
 			var image = this.getImage();
 
-
-			var candidatePositions = background.getCoordinates(); // this is a list of all coordinates for pixels in background.image, ordered by distance from the center.
 			var componentCoordinates = image.getCoordinates(constants.whitePixels.EXCLUDE); // this is a list of all coordinates for black pixels in this.image
+			var candidatePositions = background.getCoordinates(); // this is a list of all coordinates for pixels in background.image, ordered by distance from the center.
 			var indexArray = background.indexArray;
 
 			// Iterate through all possible positions where the word could be placed, and return the first position 
@@ -402,30 +393,24 @@
 			// ordered by distance to the center (closest first) so the *first* non-intersecting position will also be 
 			// the *most central* non-intersecting position.
 			var position = null;
-			var len = candidatePositions.length/2;	// candidatePositions (and componentCoordinates) has 2 consecutive elements for every pixel.
-			var halfWordWidth = image.width/2;
-			var halfWordHeight = image.height/2;
-
+			var len = candidatePositions.length;
 			for (var i = 0; i < len; i=i+3) {
-				var xIndex = candidatePositions[2*indexArray[i]];
-				var yIndex = xIndex + 1;
+				var candidate = candidatePositions[indexArray[i]];
 
-				var x = candidatePositions[xIndex];
-				var y = candidatePositions[yIndex];
+				var x = Math.floor(candidate.x - image.width / 2);
+				var y = Math.floor(candidate.y - image.height / 2);
+				var topLeft = new Coordinate(x, y);
 
-				var topLeftX = Math.floor(x - halfWordWidth);
-				var topLeftY = Math.floor(y - halfWordHeight);
-
-				if (!background.intersection(componentCoordinates, topLeftX, topLeftY)) {
-					position = new Coordinate(x, y);
+				if (!background.intersection(componentCoordinates, topLeft)) {
+					position = candidate;
 					break;
 				}
 			}
 
 			if (position === null) {
 				// the default position is the center of the image.
-				var x = Math.floor(background.width/2); // - bbox.start.x - image.width/2
-				var y = Math.floor(background.height/2); // - bbox.start.y - image.height/2
+				var x = Math.floor(background.width / 2); // - bbox.start.x - image.width/2
+				var y = Math.floor(background.height / 2); // - bbox.start.y - image.height/2
 				var position = new Coordinate(x, y);
 			}
 
