@@ -63,6 +63,28 @@
 			};
 		}
 
+		Message.prototype.getTextWithoutPunctuation = function() {
+
+			var text = this.text.toLowerCase();
+			var punctuation = ['.', ',', '!', '?'];
+
+			for (var i=0; i<text.length; i++) {
+				for (var j=0; j<punctuation.length; j++) {
+					if (text[i] === punctuation[j]){
+						var text = text.slice(0, i) + text.slice(i+1, text.length);
+						break;	// remember, this only breaks out of the inner loop, not the outer loop.
+					}
+				}
+			}
+
+			return text;
+		};
+
+		Message.prototype.getWords = function() {
+			var text = this.getTextWithoutPunctuation();
+			return text.split(' ');
+		};
+
 		Message.prototype.updateOnInstant = function(instant) {
 			this.dependencies.instant = instant;
 			this.sampleTime = instant.sampleTime;
@@ -167,7 +189,7 @@
 				// sort locationHistory into chronological order
 				this.locationHistory.sort( function compare(a, b) {
 					if (a.sampleTime < b.sampleTime) return -1;
-					if (a.sampleTime > b.sampleTime) return 1;
+					else if (a.sampleTime > b.sampleTime) return 1;
 					else return 0;
 				});
 

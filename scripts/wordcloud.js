@@ -332,16 +332,13 @@
 
 			var xMin = 0;				// The word is written at the position [0,0], thus xMin must be 0. Sadly, yMin is not guaranteed to also be 0.
 			var xMax = width;			// Derived from ctx.measureText(text).width
-
 			var yMin = image.height;	// Guaranteed to be bigger than the real value.
 			var yMax = 0;				// Guaranteed to be smaller than the real value.
 
 			for (var y = 0; y < image.height; y += 1) {
-
 				for (var x = xMin; x < xMax; x += 2) {
 					
 					var alpha = image.getPixel(new Coordinate(x, y));
-
 					if (alpha > 0) {
 						yMin = Math.min(yMin, y);
 						yMax = Math.max(yMax, y);
@@ -357,7 +354,6 @@
 			this.height = this.end.y - this.start.y;
 
 			totalTime += Date.now()-startTime;
-			console.log('total bbox time :', totalTime);
 		}
 
 		BoundingBox.prototype.paint = function(canvas, color) {
@@ -374,35 +370,56 @@
 
 	var Word = (function() {
 
-		function Word(text, frequency, fontWeight, fontName) {
-			var self = this;
+		function Word(text, fontWeight, fontName) {
 
-			this.text = text;
-			this.size = constants.TEXT_SIZE_CONSTANT + constants.TEXT_SIZE_MULTIPLIER * frequency;
-			this.fontWeight = fontWeight;
-			this.fontName = fontName;
+			this.frequency = 0;
+			this.frequencyIsDirty = false;
 
 			this.image = undefined;
 			this.bbox = undefined;
-			this.generateImage();
+
+			this.text = text;
+			this.fontWeight = fontWeight;
+			this.fontName = fontName;
 		}
 
+		Word.prototype.incrementFrequency = function() {
+			
+			this.frequency++;
+			this.frequencyIsDirty = true;
+		};
+
+		Word.prototype.decrementFrequency = function() {
+			
+			if (this.frequency > 0) {
+				this.frequency--;
+				this.frequencyIsDirty = true;
+			}
+		};
+
+		Word.prototype.getSize = function() {
+			var size = constants.TEXT_SIZE_CONSTANT + constants.TEXT_SIZE_MULTIPLIER * this.frequency;
+			return size;
+		};
+
 		Word.prototype.generateImage = function() {
-			// This function should be called every time the word's frequency changes.
+			// This function should be called when the word's frequency changes.
 
 			var canvas = new Canvas(600, 200);
-			var width = canvas.writeText(this.text, this.size, false, this.fontWeight, this.fontName);
+			var width = canvas.writeText(this.text, this.getSize(), false, this.fontWeight, this.fontName);
 			var fullImage = canvas.readImage();
 			
 			this.bbox = new BoundingBox(fullImage, width);
 			this.image = canvas.readImage(this.bbox);
+
+			this.frequencyIsDirty = false;
 		};
 
-		Word.prototype.findPosition = function(background) {
+		Word.prototype.generatePosition = function(draftBackground) {	// should be passed draftBackground
 
 			var componentCoordinates = this.image.getCoordinates(constants.whitePixels.EXCLUDE); // this is a list of all coordinates for black pixels in this.image
-			var candidatePositions = background.getCoordinates(); // this is a list of all coordinates for pixels in background.image, ordered by distance from the center.
-			var indexArray = background.indexArray;
+			var candidatePositions = draftBackground.getCoordinates(); // this is a list of all coordinates for pixels in background.image, ordered by distance from the center.
+			var indexArray = draftBackground.indexArray;
 
 			// Iterate through all possible positions where the word could be placed, and return the first position 
 			// which doesn't cause the word to intersect with any other words. Note that the possible positions are
@@ -413,11 +430,11 @@
 			for (var i = 0; i < len; i=i+3) {
 				var candidate = candidatePositions[indexArray[i]];
 
-				var x = Math.floor(candidate.x - this.image.width / 2);
-				var y = Math.floor(candidate.y - this.image.height / 2);
+				var x = Math.floor(candidate.x - this.image.width/2);
+				var y = Math.floor(candidate.y - this.image.height/2);
 				var topLeft = new Coordinate(x, y);
 
-				if (!background.intersection(componentCoordinates, topLeft)) {
+				if (!draftBackground.intersection(componentCoordinates, topLeft)) {
 					position = candidate;
 					break;
 				}
@@ -425,30 +442,22 @@
 
 			if (position === null) {
 				// the default position is the center of the image.
-				var x = Math.floor(background.width / 2); // - bbox.start.x - image.width/2
-				var y = Math.floor(background.height / 2); // - bbox.start.y - image.height/2
+				var x = Math.floor(draftBackground.width/2);
+				var y = Math.floor(draftBackground.height/2);
 				var position = new Coordinate(x, y);
 			}
 
-			return {
-				wordCenter: position,
-				boundingBox: this.bbox
+			this.position = {
+				x: position.x - this.bbox.width/2 - this.bbox.start.x,
+				y: position.y - this.bbox.height/2 - this.bbox.start.y
 			};
+
+			draftBackground.writeText(this.text, this.getSize(), true, this.fontWeight, this.fontName, this.position);
 		};
 
-		Word.prototype.paint = function(draftBackground, finalBackground) {
+		Word.prototype.paint = function(finalBackground) {
 
-			var retval = this.findPosition(draftBackground);
-			var wordCenter = retval.wordCenter;
-			var boundingBox = retval.boundingBox;
-
-			var position = {
-				x: wordCenter.x - boundingBox.width / 2 - boundingBox.start.x,
-				y: wordCenter.y - boundingBox.height / 2 - boundingBox.start.y
-			};
-
-			draftBackground.writeText(this.text, this.size, true, this.fontWeight, this.fontName, position);
-			finalBackground.writeText(this.text, this.size, false, this.fontWeight, this.fontName, position);
+			finalBackground.writeText(this.text, this.getSize(), false, this.fontWeight, this.fontName, this.position);
 		};
 
 		return Word;
@@ -472,32 +481,100 @@
 			this.draftBackground = new Background(width, height, undefined, true);
 			this.finalBackground = new Background(width, height, 'wordcloud', false);
 
-			this.words = [];
+			this.bagOfWords = [];
 		}
 
-		WordCloud.prototype.putWord = function(text, frequency) {
+		WordCloud.prototype.getWord = function(text, createIfNonExistent) {
 
-			if ((text === undefined) || (frequency === undefined)) {
-				console.error('insufficient arguments');
-				return;
+			for (var i=0; i<this.bagOfWords.length; i++) {
+				var word = this.bagOfWords[i];
+				if (word.text === text) {
+					return word;
+				}
 			}
-
-			var word = new Word(text, frequency, this.fontweight, this.fontname);
-			this.words.push(word);
+			
+			// else:
+			if (createIfNonExistent) {
+				var word = new Word(text, this.fontweight, this.fontname);
+				this.bagOfWords.push(word);
+				return word;
+			} else {
+				return undefined;
+			}
 		};
 
-		WordCloud.prototype.paint = function() {
-			for (var i = 0; i < this.words.length; i++) {
-				var word = this.words[i];
-				word.paint(this.draftBackground, this.finalBackground);
+		WordCloud.prototype.updateBagOfWords = function(message) {
+
+			var textualWords = message.getWords();
+
+			if (message.isActive) {
+				for (var i=0; i<textualWords.length; i++) {
+					var text = textualWords[i];
+					var word = this.getWord(text, true);
+					word.incrementFrequency();
+				}
 			}
+			else {
+				for (var i=0; i<textualWords.length; i++) {
+					var text = textualWords[i];
+					var word = this.getWord(text, false);
+					if (word !== undefined) {
+						word.decrementFrequency();
+					}
+				}
+			};
 
+			// remove all Word()s with a frequency of zero.
+			this.bagOfWords = this.bagOfWords.filter(function(el){return el.frequency>0});
+		};
 
+		WordCloud.prototype.triggerRequiredCalculations = function() {
+			
+			// sort the words by frequency (largest first)
+			this.bagOfWords.sort( function compare(a, b) {
+				if (a.frequency < b.frequency) return 1;
+				else if (a.frequency > b.frequency) return -1;
+				else return 0;
+			});
+
+			// go through the list in order, and once you've seen the first dirty word, set all following words to be dirty.
+			var forcePositionGeneration = false;
+			for (var i=0; i<this.bagOfWords.length; i++) {
+				var word = this.bagOfWords[i];
+
+				if (word.frequencyIsDirty) {
+					word.generateImage();
+					forcePositionGeneration = true;
+				}
+
+				if (forcePositionGeneration) {
+					word.generatePosition(this.draftBackground);
+				}
+			}
 		};
 
 		WordCloud.prototype.updateOnMessage = function(message) {
-			//console.log('wordcloud: received message');
+
+			var startTime = Date.now();
+
+			this.draftBackground.clear();
+			this.finalBackground.clear();
+
+			this.updateBagOfWords(message);
+			this.triggerRequiredCalculations();
+			this.paint();
+
+			console.log('total wordCloud time :', (Date.now()-startTime)/1000);
 		};
+
+		WordCloud.prototype.paint = function() {
+
+			for (var text in this.bagOfWords) {
+				var word = this.bagOfWords[text];
+				word.paint(this.finalBackground);
+			}
+		};
+
 
 		return WordCloud;
 	})();
