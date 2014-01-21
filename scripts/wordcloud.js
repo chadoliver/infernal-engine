@@ -163,6 +163,8 @@
 			else this.context.shadowBlur = 0;
 
 			this.context.fillText(text, position.x, position.y);
+
+			return this.context.measureText(text).width;
 		};
 
 		Canvas.prototype.writeImage = function(image, position) {
@@ -322,27 +324,34 @@
 		totalTime = 0;
 
 		/** @constructor */
-		function BoundingBox(image) {
+		function BoundingBox(image, width) {
 
 			// This function is almost always the largest part of Word.getImage();
 
 			var startTime = Date.now();
 
-			this.start = new Coordinate(Infinity, Infinity);
-			this.end = new Coordinate(-Infinity, -Infinity);
+			var xMin = 0;				// The word is written at the position [0,0], thus xMin must be 0. Sadly, yMin is not guaranteed to also be 0.
+			var xMax = width;			// Derived from ctx.measureText(text).width
 
-			for (var y = 0; y < image.height; y+=2) {
-				for (var x = 0; x < image.width; x+=2) {
+			var yMin = image.height;	// Guaranteed to be bigger than the real value.
+			var yMax = 0;				// Guaranteed to be smaller than the real value.
+
+			for (var y = 0; y < image.height; y += 1) {
+
+				for (var x = xMin; x < xMax; x += 2) {
+					
 					var alpha = image.getPixel(new Coordinate(x, y));
 
 					if (alpha > 0) {
-						this.start.x = Math.min(this.start.x, x);
-						this.start.y = Math.min(this.start.y, y);
-						this.end.x = Math.max(this.end.x, x);
-						this.end.y = Math.max(this.end.y, y);
+						yMin = Math.min(yMin, y);
+						yMax = Math.max(yMax, y);
+						break;	// we're only concerned with height (y-value), so after we've found one black pixel in the row we can skip to the next row.
 					}
 				}
 			}
+
+			this.start = new Coordinate(xMin, yMin);
+			this.end = new Coordinate(xMax, yMax);
 
 			this.width = this.end.x - this.start.x;
 			this.height = this.end.y - this.start.y;
@@ -382,10 +391,10 @@
 			// This function should be called every time the word's frequency changes.
 
 			var canvas = new Canvas(600, 200);
-			canvas.writeText(this.text, this.size, false, this.fontWeight, this.fontName);
+			var width = canvas.writeText(this.text, this.size, false, this.fontWeight, this.fontName);
 			var fullImage = canvas.readImage();
 			
-			this.bbox = new BoundingBox(fullImage);
+			this.bbox = new BoundingBox(fullImage, width);
 			this.image = canvas.readImage(this.bbox);
 		};
 
