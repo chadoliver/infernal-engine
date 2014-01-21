@@ -1,35 +1,14 @@
 starter.wait(function () {
 
     var map = new Map('map', 'SATELLITE', 12, [-42.72994625445004, 171.6904809188843]);
-
-    //===========================================================================================================//
-
     var wordCloud = new WordCloud('wordcloud', constants.FONT_WEIGHT, constants.FONT_NAME);
-
-    wordCloud.putWord('scrub', 13);
-    wordCloud.putWord('plume', 10);
-    wordCloud.putWord('black', 8);
-    wordCloud.putWord('fire', 7);
-    wordCloud.putWord('jiff', 5);
-    wordCloud.putWord('plume-driven', 4);
-    wordCloud.putWord('bubble', 3);
-    wordCloud.putWord('cheese', 2);
-    wordCloud.putWord('wooler', 2);
-    wordCloud.putWord('triskele', 2);
-    wordCloud.putWord('gasp', 2);
-    wordCloud.putWord('hennig', 1);
-
-    wordCloud.paint();
-
-    //===========================================================================================================//
-
     var messageBoard = new MessageBoard('messages');
 
     //===========================================================================================================//
 
     var sampleTimeSpeedup = 10;
     var zeroTime = 20*1000;
-    var endTime = 300*1000;
+    var endTime = 90*1000;
     var timeController = new TimeController(zeroTime, endTime, sampleTimeSpeedup);
 
     var markerSet = new MarkerSet(map);
