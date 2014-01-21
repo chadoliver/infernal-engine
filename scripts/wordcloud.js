@@ -102,7 +102,7 @@
 
 		Image.prototype.getCoordinates = function(whitePixels) {
 
-			coordinates = [];
+			var coordinates = new Array(this.height*this.width);
 
 			for (var y = 0; y < this.height; y++) {
 				for (var x = 0; x < this.width; x++) {
@@ -110,10 +110,10 @@
 						var pixelIndex = constants.NUM_CHANNELS * (y * this.width + x);
 						var alpha = this.data[pixelIndex + constants.ALPHA_CHANNEL];
 						if (alpha > 0) {
-							coordinates.push(new Coordinate(x, y));
+							coordinates[y*this.width+x] = new Coordinate(x, y);
 						}
 					} else {
-						coordinates.push(new Coordinate(x, y));
+						coordinates[y*this.width+x] = new Coordinate(x, y);
 					}
 				}
 			}
@@ -163,6 +163,8 @@
 			else this.context.shadowBlur = 0;
 
 			this.context.fillText(text, position.x, position.y);
+
+			return this.context.measureText(text).width;
 		};
 
 		Canvas.prototype.writeImage = function(image, position) {
@@ -196,13 +198,17 @@
 	var Background = (function() {
 
 		/** @constructor */
-		function Background(width, height, id) {
+		function Background(width, height, id, generateIndexArray) {
 			this.width = width;
 			this.height = height;
 
 			this.canvas = new Canvas(width, height);
+
 			if (id !== undefined) {
 				this.canvas.attach(id);
+			}
+			if (generateIndexArray) {
+				this.indexArray = this.getIndexArray(width, height);
 			}
 
 			this.image = this.readImage();
@@ -233,13 +239,15 @@
 
 		Background.prototype.intersection = function(subjectCoordinates, offset) {
 
-			for (var i = 0; i < subjectCoordinates.length; i++) {
+			for (var i = 0; i < subjectCoordinates.length; i=i+3) {
 
-				var coordinate = subjectCoordinates[i].sum(offset);
-				var pixel = this.readPixel(coordinate);
+				if (subjectCoordinates[i] !== undefined) {
+					var coordinate = subjectCoordinates[i].sum(offset);
+					var pixel = this.readPixel(coordinate);
 
-				if (pixel !== 0) {
-					return true;
+					if (pixel !== 0) {
+						return true;
+					}
 				}
 			}
 
@@ -248,23 +256,60 @@
 		};
 
 		Background.prototype.getCoordinates = function() {
-			// Return a list of all coordinates (effectively, pixels) in the image. The list is ordered by closeness to the center, 
-			// with a small bias to favour pixels closer to the vertical middle of the image.
+			// Return a list of all coordinates (effectively, pixels) in the image. This.indexArray may be used to 
+			// access them in order of closeness to the center of the image.
 
-			coordinates = this.image.getCoordinates(constants.whitePixels.INCLUDE);
+			return this.image.getCoordinates(constants.whitePixels.INCLUDE);
+		};
 
-			// sort the coordinates by closeness to the center
-			var center = new Coordinate(this.width / 2, this.height / 2);
-			coordinates.sort(function compare(a, b) {
-				var distanceA = a.distance(center);
-				var distanceB = b.distance(center);
+		Background.prototype.getIndexArray = function(width, height) {
+			// the index array is a list of indices used as a substitute for sorting the coordinates returned 
+			// by this.image.getCoordinates(). So, if we have:
+			//
+			// 		var coordinates = background.getCoordinates();
+			//		var indexArray = background.getIndexArray();
+			//
+			// Then to access the coordinates as if they were sorted by distance from the center of the 
+			// wordcloud, use:
+			//
+			// 		for (var i=0, i<indexArray.length; i++) {
+			//			var coordinate = coordinates[indexArray[i]];
+			//		}
 
-				if (distanceA < distanceB) return -1;
-				if (distanceA > distanceB) return 1;
+			var startTime = Date.now();
+
+			var draftArray = new Array(height*width);	// used to preserve temporary values through the sorting process
+			var indexArray = new Array(height*width);
+
+			var center =  {
+				x: width/2,
+				y: height/2
+			};
+
+			for (var y = 0; y < height; y++) {
+				for (var x = 0; x < width; x++) {
+
+					var deltaX = (x - center.x) * constants.HORIZONTAL_SCALING_FACTOR;
+					var deltaY = (y - center.y) * constants.VERTICAL_SCALING_FACTOR;
+					var distanceToCenter = Math.sqrt(deltaX*deltaX + deltaY*deltaY);
+
+					var indexFromTopLeft = y*this.width+x;
+
+					draftArray[indexFromTopLeft] = [distanceToCenter, indexFromTopLeft];
+				}
+			}
+
+			draftArray.sort(function compare(a, b) {
+				if (a[0] < b[0]) return -1;
+				if (a[0] > b[0]) return 1;
 				else return 0;
 			});
 
-			return coordinates;
+			for (var i=0; i<(height*width); i++) {
+				indexArray[i] = draftArray[i][1];
+			}
+
+			return indexArray;
 		};
 
 		return Background;
@@ -276,26 +321,43 @@
 
 	var BoundingBox = (function() {
 
-		/** @constructor */
-		function BoundingBox(image) {
-			this.start = new Coordinate(Infinity, Infinity);
-			this.end = new Coordinate(-Infinity, -Infinity);
+		totalTime = 0;
 
-			for (var y = 0; y < image.height; y++) {
-				for (var x = 0; x < image.width; x++) {
+		/** @constructor */
+		function BoundingBox(image, width) {
+
+			// This function is almost always the largest part of Word.getImage();
+
+			var startTime = Date.now();
+
+			var xMin = 0;				// The word is written at the position [0,0], thus xMin must be 0. Sadly, yMin is not guaranteed to also be 0.
+			var xMax = width;			// Derived from ctx.measureText(text).width
+
+			var yMin = image.height;	// Guaranteed to be bigger than the real value.
+			var yMax = 0;				// Guaranteed to be smaller than the real value.
+
+			for (var y = 0; y < image.height; y += 1) {
+
+				for (var x = xMin; x < xMax; x += 2) {
+					
 					var alpha = image.getPixel(new Coordinate(x, y));
 
 					if (alpha > 0) {
-						this.start.x = Math.min(this.start.x, x);
-						this.start.y = Math.min(this.start.y, y);
-						this.end.x = Math.max(this.end.x, x);
-						this.end.y = Math.max(this.end.y, y);
+						yMin = Math.min(yMin, y);
+						yMax = Math.max(yMax, y);
+						break;	// we're only concerned with height (y-value), so after we've found one black pixel in the row we can skip to the next row.
 					}
 				}
 			}
 
+			this.start = new Coordinate(xMin, yMin);
+			this.end = new Coordinate(xMax, yMax);
+
 			this.width = this.end.x - this.start.x;
 			this.height = this.end.y - this.start.y;
+
+			totalTime += Date.now()-startTime;
+			console.log('total bbox time :', totalTime);
 		}
 
 		BoundingBox.prototype.paint = function(canvas, color) {
@@ -312,15 +374,6 @@
 
 	var Word = (function() {
 
-		var getImage = function(text, size, isBlurred, fontWeight, fontName) {
-			var canvas = new Canvas(600, 200);
-			canvas.writeText(text, size, isBlurred, fontWeight, fontName);
-			var fullImage = canvas.readImage();
-			var bbox = new BoundingBox(fullImage);
-			return canvas.readImage(bbox);
-		};
-
-		/** @constructor */
 		function Word(text, frequency, fontWeight, fontName) {
 			var self = this;
 
@@ -328,32 +381,40 @@
 			this.size = constants.TEXT_SIZE_CONSTANT + constants.TEXT_SIZE_MULTIPLIER * frequency;
 			this.fontWeight = fontWeight;
 			this.fontName = fontName;
+
+			this.image = undefined;
+			this.bbox = undefined;
+			this.generateImage();
 		}
 
-		/** @private */
-		Word.prototype.findPosition = function(background) {
-
-			var position = null;
+		Word.prototype.generateImage = function() {
+			// This function should be called every time the word's frequency changes.
 
 			var canvas = new Canvas(600, 200);
-			canvas.writeText(this.text, this.size, false, this.fontWeight, this.fontName);
+			var width = canvas.writeText(this.text, this.size, false, this.fontWeight, this.fontName);
 			var fullImage = canvas.readImage();
-			var bbox = new BoundingBox(fullImage);
-			var image = canvas.readImage(bbox);
+			
+			this.bbox = new BoundingBox(fullImage, width);
+			this.image = canvas.readImage(this.bbox);
+		};
 
-			var componentCoordinates = image.getCoordinates(constants.whitePixels.EXCLUDE); // this is a list of all coordinates for black pixels in this.image
+		Word.prototype.findPosition = function(background) {
+
+			var componentCoordinates = this.image.getCoordinates(constants.whitePixels.EXCLUDE); // this is a list of all coordinates for black pixels in this.image
 			var candidatePositions = background.getCoordinates(); // this is a list of all coordinates for pixels in background.image, ordered by distance from the center.
+			var indexArray = background.indexArray;
 
 			// Iterate through all possible positions where the word could be placed, and return the first position 
 			// which doesn't cause the word to intersect with any other words. Note that the possible positions are
 			// ordered by distance to the center (closest first) so the *first* non-intersecting position will also be 
 			// the *most central* non-intersecting position.
+			var position = null;
 			var len = candidatePositions.length;
-			for (var i = 0; i < len; i++) {
-				var candidate = candidatePositions[i];
+			for (var i = 0; i < len; i=i+3) {
+				var candidate = candidatePositions[indexArray[i]];
 
-				var x = Math.floor(candidate.x - image.width / 2);
-				var y = Math.floor(candidate.y - image.height / 2);
+				var x = Math.floor(candidate.x - this.image.width / 2);
+				var y = Math.floor(candidate.y - this.image.height / 2);
 				var topLeft = new Coordinate(x, y);
 
 				if (!background.intersection(componentCoordinates, topLeft)) {
@@ -371,7 +432,7 @@
 
 			return {
 				wordCenter: position,
-				boundingBox: bbox
+				boundingBox: this.bbox
 			};
 		};
 
@@ -405,15 +466,11 @@
 			var width = 350;
 			var height = 250;
 
-			/** @private */
 			this.fontweight = fontweight;
-			/** @private */
 			this.fontname = fontname;
 
-			/** @private */
-			this.draftBackground = new Background(width, height, undefined);
-			/** @private */
-			this.finalBackground = new Background(width, height, 'wordcloud');
+			this.draftBackground = new Background(width, height, undefined, true);
+			this.finalBackground = new Background(width, height, 'wordcloud', false);
 
 			this.words = [];
 		}
@@ -434,13 +491,16 @@
 				var word = this.words[i];
 				word.paint(this.draftBackground, this.finalBackground);
 			}
+
+
+		};
+
+		WordCloud.prototype.updateOnMessage = function(message) {
+			//console.log('wordcloud: received message');
 		};
 
 		return WordCloud;
 	})();
 
-	window['WordCloud'] = WordCloud; // <-- Constructor
-	window['WordCloud'].prototype['paint'] = WordCloud.prototype.paint;
-	window['WordCloud'].prototype['putWord'] = WordCloud.prototype.putWord;
-
+	window['WordCloud'] = WordCloud;
 })();

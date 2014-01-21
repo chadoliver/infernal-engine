@@ -30,20 +30,28 @@
 		Marker.prototype.showAt = function(location) {
 			
 			if (location === undefined) {
+				// do nothing.
+			}
+			else if (location === null) {
+				// remove the marker.
 				this.hide();
 			}
-			else if (this.marker === null) {
-				// the marker doesn't exist, so we create it
-
-				this.marker = new google.maps.Marker({
-				    position: location.toGoogle(),
-				    map: this.map.map,	// this.map is an instance of Map(), while this.map.map is an instance of google.maps.Map().
-				    title: this.person.name
-				});
-			}
 			else {
-				// the marker exists, so we just need to change the location.
-				this.marker.setPosition(location.latitude, location.longitude);
+				// if location is actually an instance of Location:
+
+				if (this.marker === null) {
+					// the marker doesn't exist, so we create it
+
+					this.marker = new google.maps.Marker({
+					    position: location.toGoogle(),
+					    map: this.map.map,	// this.map is an instance of Map(), while this.map.map is an instance of google.maps.Map().
+					    title: this.person.name
+					});
+				}
+				else {
+					// the marker exists, so we just need to change the location.
+					this.marker.setPosition(location.toGoogle());
+				}
 			}
 		};
 	
@@ -93,53 +101,38 @@
 			this.updateOnAction(action);
 		};
 
-		Person.prototype.setLocationFromAction = function(action) {
+		
 
-			if (action !== undefined) {
-				this.marker.showAt(action.location);
-				this.currentLocationSource = action;
-			} else {
-				this.marker.hide();
-				this.currentLocationSource = null;
+		Person.prototype.publishMessage = function(action) {
+
+			if ((action.message !== undefined) && (action.message !== null)) {
+
+				var messagesDiv = document.getElementById('messages');
+				var messageWrapper = document.createElement('div');
+				var message = document.createElement('div');
+
+				messageWrapper.className = 'messageWrapper';
+				messageWrapper.id = action.sampleTime.toString();
+				
+				message.className = 'message';
+				message.innerHTML = this.name + ": " + action.message;
+
+				messageWrapper.appendChild(message);
+				messagesDiv.appendChild(messageWrapper);
 			}
-		};
+		}
 
-		Person.prototype.progressLocation = function(action) {
-
-			if (this.currentLocationSource === null || action.sampleTime > this.currentLocationSource.sampleTime) {
-				if (action.location !== undefined) {
-					this.setLocationFromAction(action);
-				}
-			} 
-			// else the action doesn't influence the current location, so we don't do anything.
-		};
-
-		Person.prototype.regressLocation = function(action) {
-
-			if (action === this.currentLocationSource) {
-
-				this.sortActions();	// ensure that the actions are sorted by sample time.
-
-				var i = this.actions.length
-				while (i--) {
-					if (this.actions[i].isActive) {
-						if (this.actions[i].location !== undefined) {
-							this.setLocationFromAction(this.actions[i]);
-							return;
-						}
-					}
-				}
-
-				// if we get this far, then there is no active action which specifies a location.
-				this.setLocationFromAction(undefined);
+		Person.prototype.retractMessage = function(action) {
+			
+			var oldMessage = document.getElementById(action.sampleTime.toString());
+			if (oldMessage !== null) {
+				var messagesDiv = document.getElementById('messages');
+				messagesDiv.removeChild(oldMessage);
 			}
-			// else the action doesn't influence the current location, so we don't do anything.
 		};
 
 		Person.prototype.updateOnAction = function(action) {
-
-			/*
-			There are two issues here: dealing with changes to the set of active messages, and dealing with 
+			/* There are two issues here: dealing with changes to the set of active messages, and dealing with 
 			changes to the Person's current location. At the moment, we won't consider changes to the set of 
 			active messages. This will come later.
 
@@ -154,32 +147,15 @@
 				  deactivation doesn't influence the current location, then obviously we don't need to do 
 				  anything at the moment.
 			*/
-			
-			var messagesDiv = document.getElementById('messages');
 
 			if (action.isActive) {
 				this.progressLocation(action);
-
-				var messageWrapper = document.createElement('div');
-				messageWrapper.className = 'messageWrapper';
-				messageWrapper.id = action.sampleTime.toString();
-
-				var message = document.createElement('div');
-				message.className = 'message';
-				message.innerHTML = this.name + ": " + action.message;
-
-				messageWrapper.appendChild(message);
-				messagesDiv.appendChild(messageWrapper);
+				this.publishMessage(action);
 			} 
 			else { // if time is being rolled back
 				this.regressLocation(action);
-
-				var oldMessage = document.getElementById(action.sampleTime.toString());
-				if (oldMessage !== null) {
-					messagesDiv.removeChild(oldMessage);
-				}
+				this.retractMessage(action);
 			}
-
 
 		};
 
@@ -231,11 +207,7 @@
 	//===========================================================================================================//
 
 
-	window['PersonSet'] = PersonSet; // <-- Constructor
-	window['PersonSet'].prototype['putPerson'] = PersonSet.prototype.putPerson;
-	window['PersonSet'].prototype['registerAction'] = PersonSet.prototype.registerAction;
-
-	window['Person'] = Person; // <-- Constructor
-	window['Person'].prototype['updateOnAction'] = Person.prototype.updateOnAction;
+	window['PersonSet'] = PersonSet;
+	window['Person'] = Person;
 
 })();

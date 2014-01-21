@@ -64,153 +64,6 @@
 	//===========================================================================================================//
 
 
-	var ProgressBar = (function() {
-		// a descriptive comment ...
-
-		function pauseEvent(e){
-		    if(e.stopPropagation) e.stopPropagation();
-		    if(e.preventDefault) e.preventDefault();
-		    e.cancelBubble=true;
-		    e.returnValue=false;
-		    return false;
-		}
-	
-		function ProgressBar(zeroTime, endTime) {
-
-			var self = this;
-
-			this.elements = {
-				rail: document.getElementById('rail'),
-				indicator: document.getElementById('indicator'),
-				handle: document.getElementById('handle'),
-			};
-
-			this.zeroTime = zeroTime || 0;			// units: milliseconds of sample time
-			this.endTime  = endTime  || 0;			// units: milliseconds of sample time
-
-			this.listeners = [];
-			this.intervalHandle = null;
-			this.sampleTimeSpeedup = null;
-			this.simulationTimeOffset = null;			
-
-			this.width = this.elements.rail.clientWidth;
-			this.horizontalOffset = this.elements.rail.getBoundingClientRect().left;
-			this.sampleMillisecondsPerPixel = (this.endTime - this.zeroTime) / this.width;
-			this.simulationMillisecondsPerPixel = null;	// this can only be set once we know sampleTimeSpeedup.
-
-			this.eventHandlers = {
-				onMouseDown: self.onMouseDown.bind(self),
-				onMouseUp: self.onMouseUp.bind(self),
-				onMouseMove: self.onMouseMove.bind(self),
-				onTick: self.onTick.bind(self)
-			};
-
-			this.elements.handle.addEventListener("mousedown", this.eventHandlers.onMouseDown, true);
-		}
-
-		ProgressBar.prototype.normalisePosition = function(position) {
-			return Math.max(0, Math.min(this.width, position));
-		};
-
-		ProgressBar.prototype.moveIndicatorTo = function(sampleTime) {
-
-			var newPosition = this.normalisePosition(sampleTime / this.sampleMillisecondsPerPixel);
-			this.elements.indicator.style.marginLeft = newPosition;
-
-			//console.log('pos:', newPosition, 'sampleT:', sampleTime);
-		};
-
-		ProgressBar.prototype.onMouseDown = function(event) {
-			// enter 'scrubbing' mode
-
-			pauseEvent(event || window.event);
-			console.log('mouse down');
-
-			document.addEventListener('mousemove', this.eventHandlers.onMouseMove, false);
-			document.addEventListener('mouseup', this.eventHandlers.onMouseUp, true);
-
-			// notify listener(s) that we've begun scrubbing.
-			for (var i = 0; i < this.listeners.length; i++) {
-				this.listeners[i].enterScrubbingMode();
-			};
-		};
-
-		ProgressBar.prototype.onMouseUp = function() {
-			// exit scrubbing mode
-
-			console.log('mouse up');
-
-			document.removeEventListener('mousemove', this.eventHandlers.onMouseMove, false);
-			document.removeEventListener('mouseup', this.eventHandlers.onMouseUp, true);
-
-			// notify listener(s) that we've finished scrubbing.
-			for (var i = 0; i < this.listeners.length; i++) {
-				this.listeners[i].exitScrubbingMode();
-			}
-		}
-
-		ProgressBar.prototype.onMouseMove = function(event) {
-
-			pauseEvent(event || window.event);
-
-			var position = this.normalisePosition(event.x - this.horizontalOffset);
-			var newSampleTime = position * this.sampleMillisecondsPerPixel;
-
-			this.moveIndicatorTo(newSampleTime);
-			
-			// notify listener(s)
-			for (var i = 0; i < this.listeners.length; i++) {
-				this.listeners[i].scrub(newSampleTime);
-			};
-		};
-
-		ProgressBar.prototype.start = function(sampleTimeSpeedup, simulationTimeOffset) {
-
-			this.pause(); // cancel this.intervalHandle
-
-			this.sampleTimeSpeedup = sampleTimeSpeedup;
-			this.simulationTimeOffset = simulationTimeOffset;
-
-			this.simulationMillisecondsPerPixel = this.sampleMillisecondsPerPixel / sampleTimeSpeedup;
-			var tickInterval = Math.max(50, this.simulationMillisecondsPerPixel);
-
-			console.log('sample ms/px:', this.sampleMillisecondsPerPixel, 'simulation ms/px:', this.simulationMillisecondsPerPixel, 'tick interval:', tickInterval);
-			this.onTick();
-			this.intervalHandle = setInterval(this.eventHandlers.onTick, tickInterval);
-
-			//console.log('interval:', tickInterval);
-		};
-
-		ProgressBar.prototype.pause = function() {
-
-			if (this.intervalHandle !== null) {
-				clearInterval(this.intervalHandle);
-				this.intervalHandle = null;
-			}
-		};
-
-		ProgressBar.prototype.onTick = function() {
-
-			var simulationTime = Date.now() - this.simulationTimeOffset;						// units: milliseconds of simulation time
-			var sampleTime = simulationTime / this.sampleTimeSpeedup + this.zeroTime;			// units: milliseconds of sample time
-			//console.log('onTick simulationTime:', simulationTime);
-
-			//console.log('tick');
-			
-			this.moveIndicatorTo(sampleTime);
-		};
-
-		ProgressBar.prototype.registerListener = function(listener) {
-			this.listeners.push(listener);
-		};
-	
-		return ProgressBar;
-	})();
-
-
-	//===========================================================================================================//
-
-
 	var Clock = (function() {
 		// Clock is the class which encapsulates the digital clock in the bottom right of the web page. This 
 		// class is just a View component; it doesn't do anything except update the time on the screen.
@@ -283,6 +136,197 @@
 	//===========================================================================================================//
 
 
+	var ProgressBar = (function() {
+		// a descriptive comment ...
+
+		function pauseEvent(e){
+		    if(e.stopPropagation) e.stopPropagation();
+		    if(e.preventDefault) e.preventDefault();
+		    e.cancelBubble = true;
+		    e.returnValue = false;
+		    return false;
+		}
+	
+		function ProgressBar(zeroTime, endTime) {
+
+			var self = this;
+
+			this.elements = {
+				context: document.getElementById('scrubber'),
+				rail: document.getElementById('rail'),
+				indicator: document.getElementById('indicator'),
+				handle: document.getElementById('handle'),
+			};
+
+			this.listeners = [];
+			this.intervalHandle = null;
+			this.sampleTimeSpeedup = null;
+			this.simulationTimeOffset = null;			
+
+			this.zeroTime = zeroTime || 0;			// units: milliseconds of sample time
+			this.endTime  = endTime  || 0;			// units: milliseconds of sample time
+
+			this.width = this.elements.rail.clientWidth;
+			this.halfIndicatorWidth = this.elements.indicator.clientWidth/2;
+			this.horizontalOffset = this.elements.rail.getBoundingClientRect().left;
+
+			this.sampleMillisecondsPerPixel = (this.endTime - this.zeroTime) / this.width;
+			this.simulationMillisecondsPerPixel = null;	// this can only be set once we know sampleTimeSpeedup.
+
+			this.eventHandlers = {
+				onMouseDown: self.onMouseDown.bind(self),
+				onMouseUp: self.onMouseUp.bind(self),
+				onMouseMove: self.onMouseMove.bind(self),
+				onMouseClick: self.onMouseClick.bind(self),
+				onTick: self.onTick.bind(self)
+			};
+
+			this.elements.handle.addEventListener("mousedown", this.eventHandlers.onMouseDown, true);
+			this.elements.rail.addEventListener("mousedown", function(){pauseEvent(event || window.event)}, true);
+			this.elements.rail.addEventListener("click", this.eventHandlers.onMouseClick, true);
+		}
+
+		//====================================//
+
+		ProgressBar.prototype.setPosition = function(sampleTime) {
+			// Remember, this accepts position as a *time*, not a pixel offset.
+
+			var position = (sampleTime - this.zeroTime) / this.sampleMillisecondsPerPixel;
+			var boundedPosition = Math.max(0, Math.min(this.width, position));
+			this.elements.indicator.style.marginLeft = boundedPosition - this.halfIndicatorWidth;
+		};
+
+		ProgressBar.prototype.getSampleTime = function(x) {
+			
+			var position = x - this.horizontalOffset;
+			var boundedPosition = Math.max(0, Math.min(this.width, position));
+			var sampleTime = boundedPosition * this.sampleMillisecondsPerPixel + this.zeroTime;
+
+			return sampleTime;
+		};
+
+		ProgressBar.prototype.followMouse = function(event) {
+			
+			pauseEvent(event || window.event);
+
+			var sampleTime = this.getSampleTime(event.x);
+			this.setPosition(sampleTime);
+
+			return sampleTime;
+		};
+
+		//====================================//
+
+		ProgressBar.prototype.onMouseDown = function(event) {
+			// enter 'scrubbing' mode
+
+			pauseEvent(event || window.event);
+
+			document.addEventListener('mousemove', this.eventHandlers.onMouseMove, false);
+			document.addEventListener('mouseup', this.eventHandlers.onMouseUp, true);
+
+			// notify listener(s) that we've begun scrubbing.
+			for (var i = 0; i < this.listeners.length; i++) {
+				this.listeners[i].enterScrubbingMode();
+			};
+		};
+
+		ProgressBar.prototype.onMouseUp = function(event) {
+			// exit scrubbing mode
+
+			document.removeEventListener('mousemove', this.eventHandlers.onMouseMove, false);
+			document.removeEventListener('mouseup', this.eventHandlers.onMouseUp, true);
+
+			// notify listener(s) that we've finished scrubbing.
+			for (var i = 0; i < this.listeners.length; i++) {
+				this.listeners[i].exitScrubbingMode();
+			}
+		}
+
+		ProgressBar.prototype.onMouseMove = function(event) {
+
+			var sampleTime = this.followMouse(event);
+
+			// notify listener(s)
+			for (var i = 0; i < this.listeners.length; i++) {
+				this.listeners[i].scrub(sampleTime);
+			};
+		};
+
+		ProgressBar.prototype.onMouseClick = function(event) {
+
+			var sampleTime = this.followMouse(event);				
+
+			// notify listener(s)
+			for (var i = 0; i < this.listeners.length; i++) {
+				this.listeners[i].enterScrubbingMode();
+				this.listeners[i].scrub(sampleTime);
+				this.listeners[i].exitScrubbingMode();
+			};
+		};
+
+		//====================================//
+
+		ProgressBar.prototype.start = function(sampleTimeSpeedup, simulationTimeOffset) {
+
+			this.pause(); // cancel this.intervalHandle
+
+			this.sampleTimeSpeedup = sampleTimeSpeedup;
+			this.simulationTimeOffset = simulationTimeOffset;
+
+			this.simulationMillisecondsPerPixel = this.sampleMillisecondsPerPixel / sampleTimeSpeedup;
+			var tickInterval = Math.max(10, this.simulationMillisecondsPerPixel);
+
+			this.onTick();
+			this.intervalHandle = setInterval(this.eventHandlers.onTick, tickInterval);
+		};
+
+		ProgressBar.prototype.pause = function() {
+
+			if (this.intervalHandle !== null) {
+				clearInterval(this.intervalHandle);
+				this.intervalHandle = null;
+			}
+		};
+
+		ProgressBar.prototype.onTick = function() {
+
+			var simulationTime = Date.now() - this.simulationTimeOffset;						// units: milliseconds of simulation time
+			var sampleTime = simulationTime * this.sampleTimeSpeedup + this.zeroTime;			// units: milliseconds of sample time
+			
+			this.setPosition(sampleTime);
+		};
+
+		//====================================//
+
+		ProgressBar.prototype.registerListener = function(listener) {
+			this.listeners.push(listener);
+		};		
+
+		ProgressBar.prototype.updateOnInstant = function(instant) {
+			// This method is called by TimeController's resetInstant, which fires once the slider gets to the end
+			// of its rail.
+
+			if (instant.isActive) {
+				this.setPosition(this.zeroTime);
+
+				for (var i = 0; i < this.listeners.length; i++) {
+					this.listeners[i].enterScrubbingMode();
+					this.listeners[i].scrub(this.zeroTime);
+					this.listeners[i].exitScrubbingMode();
+				};
+			}
+			// once we get to this point, instant.isActive is guaranteed to be false (either because it always was, or
+			// because it was scrubbed it back to the start)
+		};
+	
+		return ProgressBar;
+	})();
+
+
+	//===========================================================================================================//
+
+
 	var TimeController = (function() {
 		// Clock is the central location for managing the current simulation time. With this class,
 		// all subscribed Time instances can be paused, resumed, and scrubbed at the same time.
@@ -292,9 +336,10 @@
 			ACTIVE: 'active'
 		};
 
-		function TimeController(zeroTime, sampleTimeSpeedup) {
+		function TimeController(zeroTime, endTime, sampleTimeSpeedup) {
 
 			this.zeroTime = zeroTime || 0;	// units: milliseconds of sample time
+			this.endTime = endTime || 100*1000;
 			this.sampleTimeSpeedup = sampleTimeSpeedup || 1;
 
 			this.listeners = [];
@@ -315,9 +360,15 @@
 			var clock = new Clock(this.zeroTime);
 			this.registerListener(clock);
 
-			var progressBar = new ProgressBar(this.zeroTime, this.zeroTime + 300*1000);
+			progressBar = new ProgressBar(this.zeroTime, this.endTime);
 			progressBar.registerListener(this);
 			this.registerListener(progressBar);
+
+			var resetInstant = new SampleInstant(this.endTime, this.zeroTime);	// the sample instant should fire when the slider gets to the end of its rail.
+
+			progressBar.resetInstant = resetInstant;
+			this.registerListener(resetInstant);
+			resetInstant.registerListener(progressBar);
 
 			playPauseButton.play();
 		};
@@ -377,8 +428,7 @@
 			// Change the current simulation time, without changing the real time. Equivalent to skipping forwards or 
 			// backwards in a movie.
 
-			var simulationTime = (sampleTime + this.zeroTime) / this.sampleTimeSpeedup;
-			console.log('TimeController scrub simulationTime:', simulationTime);
+			var simulationTime = (sampleTime - this.zeroTime) / this.sampleTimeSpeedup;
 
 			var offset = Date.now() - simulationTime;						// units: milliseconds of real time
 			this.synchron.simulation = simulationTime;						// units: milliseconds of simulation time
@@ -410,14 +460,6 @@
 		return TimeController;
 	})();
 
-
 	window['TimeController'] = TimeController; // <-- Constructor
-
-	window['TimeController'].prototype['start'] = TimeController.prototype.start;
-	window['TimeController'].prototype['pause'] = TimeController.prototype.pause;
-	window['TimeController'].prototype['scrub'] = TimeController.prototype.scrub;
-
-	window['TimeController'].prototype['subscribe'] = TimeController.prototype.subscribe;
-	window['TimeController'].prototype['getSimulationTime'] = TimeController.prototype.getSimulationTime;
 
 })();
