@@ -20,6 +20,15 @@
 		}
 	};
 
+	var totals = {
+		instantiation: 0,
+		bbox: 0,
+		image: 0,
+		coordinates: 0,
+		position: 0,
+		write: 0
+	}
+
 
 	//===========================================================================================================//
 
@@ -211,6 +220,7 @@
 				this.indexArray = this.getIndexArray(width, height);
 			}
 
+			this.coordinates = null;
 			this.image = this.readImage();
 		};
 
@@ -259,7 +269,23 @@
 			// Return a list of all coordinates (effectively, pixels) in the image. This.indexArray may be used to 
 			// access them in order of closeness to the center of the image.
 
-			return this.image.getCoordinates(constants.whitePixels.INCLUDE);
+			//return this.image.getCoordinates(constants.whitePixels.INCLUDE);
+
+			// key idea: the background coordinates don't change over the lifetime of the wordcloud, so we only need to 
+			// generate them once.
+
+			if (this.coordinates === null) {
+				
+				this.coordinates = new Array(this.height*this.width);
+				for (var y = 0; y < this.height; y++) {
+					for (var x = 0; x < this.width; x++) {
+						this.coordinates[y*this.width+x] = new Coordinate(x, y);
+					}
+				}
+				
+			}
+			return this.coordinates;
+			
 		};
 
 		Background.prototype.getIndexArray = function(width, height) {
@@ -321,8 +347,6 @@
 
 	var BoundingBox = (function() {
 
-		totalTime = 0;
-
 		/** @constructor */
 		function BoundingBox(image, width) {
 
@@ -356,8 +380,9 @@
 			this.width = this.end.x - this.start.x;
 			this.height = this.end.y - this.start.y;
 
-			totalTime += Date.now()-startTime;
-			console.log('total bbox time :', totalTime);
+			var bboxTime = Date.now()-startTime;
+			totals.bbox += bboxTime;
+			console.log('bounding box:', bboxTime);
 		}
 
 		BoundingBox.prototype.paint = function(canvas, color) {
@@ -384,11 +409,12 @@
 
 			this.image = undefined;
 			this.bbox = undefined;
-			this.generateImage();
 		}
 
 		Word.prototype.generateImage = function() {
 			// This function should be called every time the word's frequency changes.
+
+			var startTime = Date.now();
 
 			var canvas = new Canvas(600, 200);
 			var width = canvas.writeText(this.text, this.size, false, this.fontWeight, this.fontName);
@@ -396,13 +422,28 @@
 			
 			this.bbox = new BoundingBox(fullImage, width);
 			this.image = canvas.readImage(this.bbox);
+
+			var imageTime = Date.now()-startTime;
+			totals.image = totals.image + imageTime;
+			console.log('generating image, including bbox:', imageTime);
 		};
 
 		Word.prototype.findPosition = function(background) {
 
+			console.log('processing', this.text);
+			
+			this.generateImage();
+
+			var startTime = Date.now();
+
 			var componentCoordinates = this.image.getCoordinates(constants.whitePixels.EXCLUDE); // this is a list of all coordinates for black pixels in this.image
 			var candidatePositions = background.getCoordinates(); // this is a list of all coordinates for pixels in background.image, ordered by distance from the center.
 			var indexArray = background.indexArray;
+
+			var coordinateTime = Date.now()-startTime;
+			totals.coordinates = totals.coordinates + coordinateTime;
+			console.log('get coordinates:', coordinateTime);
+			var continueTime = Date.now();
 
 			// Iterate through all possible positions where the word could be placed, and return the first position 
 			// which doesn't cause the word to intersect with any other words. Note that the possible positions are
@@ -430,6 +471,11 @@
 				var position = new Coordinate(x, y);
 			}
 
+			var positionTime = Date.now()-continueTime;
+			totals.position = totals.position + positionTime;
+			console.log('find position:', positionTime);
+			console.log('total time for word:', Date.now()-startTime);
+
 			return {
 				wordCenter: position,
 				boundingBox: this.bbox
@@ -447,8 +493,15 @@
 				y: wordCenter.y - boundingBox.height / 2 - boundingBox.start.y
 			};
 
+			var startTime = Date.now();
+
 			draftBackground.writeText(this.text, this.size, true, this.fontWeight, this.fontName, position);
 			finalBackground.writeText(this.text, this.size, false, this.fontWeight, this.fontName, position);
+
+			var writeTime = Date.now()-startTime;
+			totals.write = totals.write + writeTime;
+			console.log('write image to wordcloud:', writeTime);
+			console.log('--------');
 		};
 
 		return Word;
@@ -477,6 +530,8 @@
 
 		WordCloud.prototype.putWord = function(text, frequency) {
 
+			var startTime = Date.now();
+
 			if ((text === undefined) || (frequency === undefined)) {
 				console.error('insufficient arguments');
 				return;
@@ -484,15 +539,27 @@
 
 			var word = new Word(text, frequency, this.fontweight, this.fontname);
 			this.words.push(word);
+
+			var instantiationTime = Date.now()-startTime;
+			totals.instantiation = totals.instantiation + instantiationTime;
 		};
 
 		WordCloud.prototype.paint = function() {
+
+			var startTime = Date.now();
+
 			for (var i = 0; i < this.words.length; i++) {
 				var word = this.words[i];
 				word.paint(this.draftBackground, this.finalBackground);
 			}
 
-
+			console.log('total time for wordcloud:', Date.now()-startTime);
+			console.log('total time for instantiation:', totals.instantiation);
+			console.log('total time for bbox:', totals.bbox);
+			console.log('total time for image:', totals.image - totals.bbox);
+			console.log('total time for coordinates:', totals.coordinates);
+			console.log('total time for position:', totals.position);
+			console.log('total time for write:', totals.write);
 		};
 
 		WordCloud.prototype.updateOnMessage = function(message) {
