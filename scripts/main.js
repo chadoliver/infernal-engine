@@ -19,7 +19,7 @@ starter.wait(function () {
     wordCloud.putWord('gasp', 2);
     wordCloud.putWord('hennig', 1);
 
-    wordCloud.paint();
+    wordCloud.paint(undefined, true);
 
     //===========================================================================================================//
 
@@ -58,5 +58,6 @@ starter.wait(function () {
     //===========================================================================================================//
 
     window['map'] = map;
+    window['wordCloud'] = wordCloud;
     window['timeController'] = timeController; 
 });
