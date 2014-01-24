@@ -268,33 +268,37 @@
 
 	var DataModel = (function() {
 	
-		function DataModel(timeController, markerSet, messageBoard, wordCloud) {
+		function DataModel(timeController, markerSet, wordCloud, messageBoard, representativeImage) {
 			
 			this.markerSet = markerSet;
 			this.timeController = timeController;
 			this.messageBoard = messageBoard;
 			this.wordCloud = wordCloud;
+			this.representativeImage = representativeImage;
 		}
 
 		DataModel.prototype.createAction = function(text, coordinates, markerId, sampleTime) {
 
-			var sampleInstant = new SampleInstant(sampleTime, this.timeController.zeroTime);
+			var instant = new Instant(sampleTime, this.timeController.zeroTime);
 			var marker = this.markerSet.getMarkerById(markerId);
 
-			this.timeController.registerListener(sampleInstant);
+			this.timeController.registerListener(instant);
 
 			if (coordinates !== null) {
 				var location = new Location(coordinates[0], coordinates[1]);
-				sampleInstant.registerListener(location);
+				instant.registerListener(location);
 				location.registerListener(marker);
 			}
 			
 			if (text !== null) {
 				var message = new Message(text, marker.name);
-				sampleInstant.registerListener(message);
+				
+				instant.registerListener(message);
 				marker.registerListener(message);
+
 				message.registerListener(this.messageBoard);
 				message.registerListener(this.wordCloud);
+				message.registerListener(this.representativeImage);
 			}			
 		};
 	

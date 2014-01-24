@@ -364,13 +364,13 @@
 			progressBar.registerListener(this);
 			this.registerListener(progressBar);
 
-			var resetInstant = new SampleInstant(this.endTime, this.zeroTime);	// the sample instant should fire when the slider gets to the end of its rail.
+			var resetInstant = new Instant(this.endTime, this.zeroTime);	// this sample instant should fire when the slider gets to the end of its rail.
 
 			progressBar.resetInstant = resetInstant;
 			this.registerListener(resetInstant);
 			resetInstant.registerListener(progressBar);
 
-			playPauseButton.play();
+			//playPauseButton.play();
 		};
 
 		TimeController.prototype.__start = function() {
@@ -378,7 +378,7 @@
 
 			this.synchron.real = Date.now(); // When the clock is paused, simulation time doesn't change but real time does.
 
-			var offset = this.synchron.real - this.synchron.simulation;	// units: milliseconds of real time
+			var offset = this.synchron.real - this.synchron.simulation;
 			for (var i = 0; i < this.listeners.length; i++) {
 				if (this.listeners[i].start !== undefined) {
 					this.listeners[i].start(this.sampleTimeSpeedup, offset);
@@ -389,9 +389,9 @@
 		TimeController.prototype.__pause = function() {
 			// Pause simulation time.
 
-			var now = Date.now();										// units: milliseconds of real time
-			this.synchron.simulation += now - this.synchron.real;		// units: milliseconds of simulation time
-			this.synchron.real = now;									// units: milliseconds of real time
+			var now = Date.now();
+			this.synchron.simulation += now - this.synchron.real;
+			this.synchron.real = now;
 			
 			for (var i = 0; i < this.listeners.length; i++) {
 				if (this.listeners[i].pause !== undefined) {
