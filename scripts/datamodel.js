@@ -17,10 +17,10 @@
 			return new google.maps.LatLng(this.latitude, this.longitude);
 		};
 
-		Location.prototype.updateOnInstant = function(instant) {
+		Location.prototype.updateOnMoment = function(moment) {
 
-			this.isActive = instant.isActive;
-			this.sampleTime = instant.sampleTime;
+			this.isActive = moment.isActive;
+			this.sampleTime = moment.sampleTime;
 
 			for (var i=0; i<this.listeners.length; i++) {
 				this.listeners[i].updateOnLocation(this);
@@ -59,13 +59,13 @@
 			this.sampleTime = null;
 			this.dependencies = {
 				marker: null,
-				instant: null,
+				moment: null,
 			};
 		}
 
-		Message.prototype.updateOnInstant = function(instant) {
-			this.dependencies.instant = instant;
-			this.sampleTime = instant.sampleTime;
+		Message.prototype.updateOnMoment = function(moment) {
+			this.dependencies.moment = moment;
+			this.sampleTime = moment.sampleTime;
 			this.notifyListeners();
 		};
 	
@@ -76,17 +76,17 @@
 
 		Message.prototype.notifyListeners = function() {
 
-			var instantIsActive = false;	// initially, all instants are in the future.
+			var momentIsActive = false;	// initially, all moments are in the future.
 			var markerIsActive = true;		// initially, all markers are active.
 
-			if (this.dependencies.instant !== null) {
-				instantIsActive = this.dependencies.instant.isActive;
+			if (this.dependencies.moment !== null) {
+				momentIsActive = this.dependencies.moment.isActive;
 			}
 			if (this.dependencies.marker !== null) {
 				markerIsActive = this.dependencies.marker.isActive;
 			}
 			
-			var newState = instantIsActive && markerIsActive;
+			var newState = momentIsActive && markerIsActive;
 
 			if (newState !== this.isActive) {
 				this.isActive = newState;
@@ -279,21 +279,21 @@
 
 		DataModel.prototype.createAction = function(text, coordinates, markerId, sampleTime) {
 
-			var instant = new Instant(sampleTime, this.timeController.zeroTime);
+			var moment = new Moment(sampleTime, this.timeController.zeroTime);
 			var marker = this.markerSet.getMarkerById(markerId);
 
-			this.timeController.registerListener(instant);
+			this.timeController.registerListener(moment);
 
 			if (coordinates !== null) {
 				var location = new Location(coordinates[0], coordinates[1]);
-				instant.registerListener(location);
+				moment.registerListener(location);
 				location.registerListener(marker);
 			}
 			
 			if (text !== null) {
 				var message = new Message(text, marker.name);
-				
-				instant.registerListener(message);
+
+				moment.registerListener(message);
 				marker.registerListener(message);
 
 				message.registerListener(this.messageBoard);
