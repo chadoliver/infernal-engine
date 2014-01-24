@@ -303,11 +303,11 @@
 			this.listeners.push(listener);
 		};		
 
-		ProgressBar.prototype.updateOnInstant = function(instant) {
-			// This method is called by TimeController's resetInstant, which fires once the slider gets to the end
+		ProgressBar.prototype.updateOnMoment = function(moment) {
+			// This method is called by TimeController's resetMoment, which fires once the slider gets to the end
 			// of its rail.
 
-			if (instant.isActive) {
+			if (moment.isActive) {
 				this.setPosition(this.zeroTime);
 
 				for (var i = 0; i < this.listeners.length; i++) {
@@ -316,8 +316,8 @@
 					this.listeners[i].exitScrubbingMode();
 				};
 			}
-			// once we get to this point, instant.isActive is guaranteed to be false (either because it always was, or
-			// because it was scrubbed it back to the start)
+			// once we get to this point, moment.isActive is guaranteed to be false (either because it always was, or
+			// because it was scrubbed back to the start)
 		};
 	
 		return ProgressBar;
@@ -345,7 +345,7 @@
 			this.listeners = [];
 			this.state = states.PAUSED;
 
-			this.synchron = { // Synchron stores the Simulation Time and Real Time representations of a single instant.
+			this.synchron = { // Synchron stores the Simulation Time and Real Time representations of a single moment.
 				real: Date.now(),			// units: milliseconds of wall time
 				simulation: 0				// units: milliseconds of simulation time
 			};
@@ -364,13 +364,13 @@
 			progressBar.registerListener(this);
 			this.registerListener(progressBar);
 
-			var resetInstant = new Instant(this.endTime, this.zeroTime);	// this sample instant should fire when the slider gets to the end of its rail.
+			var resetMoment = new Moment(this.endTime, this.zeroTime);	// this sample moment should fire when the slider gets to the end of its rail.
 
-			progressBar.resetInstant = resetInstant;
-			this.registerListener(resetInstant);
-			resetInstant.registerListener(progressBar);
+			progressBar.resetMoment = resetMoment;
+			this.registerListener(resetMoment);
+			resetMoment.registerListener(progressBar);
 
-			//playPauseButton.play();
+			playPauseButton.play();
 		};
 
 		TimeController.prototype.__start = function() {
